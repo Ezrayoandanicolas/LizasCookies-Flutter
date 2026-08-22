@@ -29,29 +29,62 @@ final expenseCategoriesProvider = FutureProvider<List<Map<String, dynamic>>>((re
 class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final Dio _dio;
   final Map<String, dynamic> _tenantQp;
+  int _page = 1;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
 
   ExpensesNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
     fetch();
   }
 
   Future<void> fetch() async {
+    _page = 1;
+    _hasMore = true;
     state = const AsyncValue.loading();
     try {
-      final res = await _dio.get(
-        '/superadmin/expenses',
-        queryParameters: _tenantQp,
-      );
+      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
+      final res = await _dio.get('/superadmin/expenses', queryParameters: params);
       final data = res.data;
-      if (data is List) {
-        final list =
-            data.map((e) => Map<String, dynamic>.from(e)).toList();
-        state = AsyncValue.data(list);
+      List list;
+      if (data is Map && data.containsKey('data')) {
+        list = data['data'];
+      } else if (data is List) {
+        list = data;
       } else {
-        state = const AsyncValue.data([]);
+        list = [];
       }
+      _hasMore = list.length >= 20;
+      state = AsyncValue.data(
+        list.map((e) => Map<String, dynamic>.from(e)).toList(),
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore) return;
+    _page++;
+    try {
+      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
+      final res = await _dio.get('/superadmin/expenses', queryParameters: params);
+      final data = res.data;
+      List list;
+      if (data is Map && data.containsKey('data')) {
+        list = data['data'];
+      } else if (data is List) {
+        list = data;
+      } else {
+        list = [];
+      }
+      _hasMore = list.length >= 20;
+      final current = state.valueOrNull ?? [];
+      state = AsyncValue.data([
+        ...current,
+        ...list.map((e) => Map<String, dynamic>.from(e)),
+      ]);
+    } catch (_) {}
   }
 
   Future<void> add({
@@ -116,27 +149,33 @@ class ExpensePage extends ConsumerStatefulWidget {
 }
 
 class _ExpensePageState extends ConsumerState<ExpensePage> {
-  static const _primary = Color(0xFFE85D3A);
-  static const _lightBg = Color(0xFFFFE8E0);
-
   final _currencyFormat =
       NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollEndNotification &&
+        notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+      ref.read(expensesProvider.notifier).loadMore();
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
     final expensesAsync = ref.watch(expensesProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pengeluaran'),
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         elevation: 0,
       ),
-      backgroundColor: _lightBg,
+      backgroundColor: theme.colorScheme.primaryContainer,
       floatingActionButton: FloatingActionButton(
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () => _showAddExpenseSheet(context),
         child: const Icon(Icons.add),
       ),
@@ -170,14 +209,25 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
                     ),
                   ],
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: expenses.length,
-                  itemBuilder: (context, index) => _ExpenseCard(
-                    expense: expenses[index],
-                    currencyFormat: _currencyFormat,
-                    onEdit: () => _showEditExpenseSheet(context, expenses[index]),
-                    onDelete: () => _confirmDelete(context, expenses[index]),
+              : NotificationListener<ScrollNotification>(
+                  onNotification: _onScrollNotification,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: expenses.length + (ref.read(expensesProvider.notifier).hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == expenses.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      return _ExpenseCard(
+                        expense: expenses[index],
+                        currencyFormat: _currencyFormat,
+                        onEdit: () => _showEditExpenseSheet(context, expenses[index]),
+                        onDelete: () => _confirmDelete(context, expenses[index]),
+                      );
+                    },
                   ),
                 ),
         ),
@@ -305,10 +355,10 @@ class _ExpenseCard extends StatelessWidget {
             ),
             Text(
               currencyFormat.format(double.tryParse(amount.toString()) ?? 0),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFE85D3A),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
@@ -366,13 +416,13 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE8E0),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFFE85D3A),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -392,8 +442,6 @@ class _AddExpenseSheet extends ConsumerStatefulWidget {
 }
 
 class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
-  static const _primary = Color(0xFFE85D3A);
-
   final _formKey = GlobalKey<FormState>();
   final _descCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
@@ -441,9 +489,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
       lastDate: DateTime.now(),
       builder: (ctx, child) {
         return Theme(
-          data: Theme.of(ctx).copyWith(
-            colorScheme: const ColorScheme.light(primary: _primary),
-          ),
+          data: Theme.of(ctx),
           child: child!,
         );
       },
@@ -650,18 +696,18 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               child: ElevatedButton(
                 onPressed: _saving ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE85D3A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: _saving
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           strokeWidth: 2,
                         ),
                       )

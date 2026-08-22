@@ -52,6 +52,8 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
   int _page = 1;
   bool _hasMore = true;
 
+  bool get hasMore => _hasMore;
+
   AdminProductsNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
     load();
   }
@@ -128,15 +130,24 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
     super.dispose();
   }
 
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollEndNotification &&
+        notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+      ref.read(adminProductsProvider.notifier).loadMore();
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(adminProductsProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manajemen Produk'),
-        backgroundColor: const Color(0xFFE85D3A),
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: Column(
         children: [
@@ -172,13 +183,22 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
               ),
               data: (items) => items.isEmpty
                   ? const Center(child: Text('Belum ada produk'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final p = items[index];
-                        return _ProductCard(product: p);
-                      },
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: _onScrollNotification,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: items.length + (ref.read(adminProductsProvider.notifier).hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == items.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final p = items[index];
+                          return _ProductCard(product: p);
+                        },
+                      ),
                     ),
             ),
           ),
@@ -186,8 +206,8 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/admin/product/add'),
-        backgroundColor: const Color(0xFFE85D3A),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: theme.colorScheme.primary,
+        child: Icon(Icons.add, color: theme.colorScheme.onPrimary),
       ),
     );
   }
@@ -221,7 +241,7 @@ class _ProductCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(imageUrl: thumbnail, fit: BoxFit.cover),
                 )
-              : const Icon(Icons.cookie, size: 28, color: Color(0xFFE85D3A)),
+              : Icon(Icons.cookie, size: 28, color: Theme.of(context).colorScheme.primary),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text('SKU: $sku | $categoryName', style: const TextStyle(fontSize: 12)),
@@ -479,8 +499,8 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? 'Edit Produk' : 'Tambah Produk'),
-        backgroundColor: const Color(0xFFE85D3A),
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: Form(
         key: _formKey,
@@ -675,12 +695,12 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE85D3A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _isLoading
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary))
                     : Text(isEdit ? 'Simpan Perubahan' : 'Tambah Produk', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
@@ -694,7 +714,7 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
     return InputDecoration(
       labelText: label,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE85D3A))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
     );
   }
 }

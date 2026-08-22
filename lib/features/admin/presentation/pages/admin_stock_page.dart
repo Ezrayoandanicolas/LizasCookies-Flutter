@@ -29,12 +29,13 @@ class _StockPageState extends ConsumerState<StockPage> {
   Widget build(BuildContext context) {
     final products = ref.watch(adminProductsProvider);
     final selectedStore = ref.watch(selectedAdminStoreProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Stok'),
-        backgroundColor: const Color(0xFFE85D3A),
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         actions: [
           // Store selector
           PopupMenuButton<StoreData?>(
@@ -197,7 +198,7 @@ class _StockProductCard extends ConsumerWidget {
                     fit: BoxFit.cover,
                   ),
                 )
-              : const Icon(Icons.cookie, size: 26, color: Color(0xFFE85D3A)),
+              : Icon(Icons.cookie, size: 26, color: Theme.of(context).colorScheme.primary),
         ),
         title: Text(name,
             style:
@@ -315,6 +316,7 @@ class _StockProductCard extends ConsumerWidget {
     final reasonCtrl = TextEditingController();
     final productId = product['id'];
     final selectedStore = ref.read(selectedAdminStoreProvider);
+    final theme = Theme.of(context);
 
     if (selectedStore == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -385,7 +387,7 @@ class _StockProductCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(10)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE85D3A)),
+                  borderSide: BorderSide(color: theme.colorScheme.primary),
                 ),
               ),
             ),
@@ -403,7 +405,7 @@ class _StockProductCard extends ConsumerWidget {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide:
-                        const BorderSide(color: Color(0xFFE85D3A)),
+                        BorderSide(color: theme.colorScheme.primary),
                   ),
                 ),
               ),
@@ -420,7 +422,7 @@ class _StockProductCard extends ConsumerWidget {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide:
-                        const BorderSide(color: Color(0xFFE85D3A)),
+                        BorderSide(color: theme.colorScheme.primary),
                   ),
                 ),
               ),
@@ -500,7 +502,7 @@ class _StockProductCard extends ConsumerWidget {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: buttonColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),

@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/storage/local_storage.dart';
 
 class CartItem {
   final int productId;
@@ -27,9 +31,29 @@ class CartItem {
 
   Map<String, dynamic> toJson() => {
     'product_id': productId,
+    'name': name,
+    'price': price,
+    'discount_price': discountPrice,
+    'image': image,
     'quantity': quantity,
-    if (unit != null) 'unit': unit,
+    'unit': unit,
+    'variant': variant,
+    'max_stock': maxStock,
   };
+
+  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+    productId: json['product_id'] as int,
+    name: json['name'] as String,
+    price: (json['price'] as num).toDouble(),
+    discountPrice: json['discount_price'] != null
+        ? (json['discount_price'] as num).toDouble()
+        : null,
+    image: json['image'] as String?,
+    quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    unit: json['unit'] as String?,
+    variant: json['variant'] as String?,
+    maxStock: (json['max_stock'] as num?)?.toInt() ?? 99,
+  );
 }
 
 class CartState {
@@ -52,10 +76,34 @@ class CartState {
       tenantId: tenantId ?? this.tenantId,
     );
   }
+
+  String toJson() => jsonEncode(items.map((i) => i.toJson()).toList());
+
+  factory CartState.fromJson(String jsonString) {
+    final list = jsonDecode(jsonString) as List;
+    return CartState(
+      items: list.map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList(),
+    );
+  }
 }
 
 class CartNotifier extends StateNotifier<CartState> {
-  CartNotifier() : super(CartState());
+  CartNotifier() : super(CartState()) {
+    _loadFromStorage();
+  }
+
+  void _loadFromStorage() {
+    final json = LocalStorage.getCart();
+    if (json != null && json.isNotEmpty) {
+      try {
+        state = CartState.fromJson(json);
+      } catch (_) {}
+    }
+  }
+
+  void _saveToStorage() {
+    LocalStorage.saveCart(state.toJson());
+  }
 
   void addItem(int productId, String name, double price, {String? image, String? unit, String? variant, double? discountPrice, int maxStock = 99}) {
     final existing = state.items.where((i) => i.productId == productId && i.variant == variant).toList();
@@ -71,12 +119,14 @@ class CartNotifier extends StateNotifier<CartState> {
         )],
       );
     }
+    _saveToStorage();
   }
 
   void removeItem(int productId, {String? variant}) {
     state = state.copyWith(
       items: state.items.where((i) => !(i.productId == productId && i.variant == variant)).toList(),
     );
+    _saveToStorage();
   }
 
   void updateQuantity(int productId, int quantity, {String? variant}) {
@@ -89,6 +139,7 @@ class CartNotifier extends StateNotifier<CartState> {
     if (idx >= 0) {
       updated[idx].quantity = quantity.clamp(1, updated[idx].maxStock);
       state = state.copyWith(items: updated);
+      _saveToStorage();
     }
   }
 
@@ -98,6 +149,7 @@ class CartNotifier extends StateNotifier<CartState> {
 
   void clear() {
     state = CartState();
+    LocalStorage.clearCart();
   }
 }
 

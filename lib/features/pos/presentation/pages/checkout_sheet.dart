@@ -6,8 +6,7 @@ import '../../../catalog/data/products_provider.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
 
-const _brandColor = Color(0xFFE85D3A);
-const _brandBg = Color(0xFFFFE8E0);
+
 
 class CheckoutSheet extends ConsumerStatefulWidget {
   final bool isPage;
@@ -305,7 +304,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           style: TextStyle(
             fontSize: bold ? 15 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-            color: bold ? _brandColor : Colors.grey[700],
+            color: bold ? Theme.of(context).colorScheme.primary : Colors.grey[700],
           ),
         ),
         Text(
@@ -313,7 +312,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           style: TextStyle(
             fontSize: bold ? 16 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-            color: bold ? _brandColor : Colors.black87,
+            color: bold ? Theme.of(context).colorScheme.primary : Colors.black87,
           ),
         ),
       ],
@@ -341,10 +340,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? _brandBg : Colors.white,
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isSelected ? _brandColor : Colors.grey[300]!,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[300]!,
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
@@ -353,7 +352,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   children: [
                     Icon(icon,
                         size: 18,
-                        color: isSelected ? _brandColor : Colors.grey[600]),
+                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[600]),
                     const SizedBox(width: 6),
                     Text(
                       method,
@@ -361,7 +360,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                         fontSize: 13,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? _brandColor : Colors.grey[700],
+                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[700],
                       ),
                     ),
                   ],
@@ -520,10 +519,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 Text(
                   CurrencyFormatter.idr(_grandTotal),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: _brandColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -535,20 +534,20 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               child: ElevatedButton(
                 onPressed: canPay ? _processPayment : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _brandColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   disabledBackgroundColor: Colors.grey[300],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: _processing
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       )
                     : const Text(

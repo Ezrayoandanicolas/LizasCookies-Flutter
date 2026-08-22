@@ -44,6 +44,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
+    final theme = Theme.of(context);
 
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next is Authenticated) {
@@ -59,7 +60,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final isLoading = authState is AuthLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -73,10 +74,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   child: Container(
                     width: 64, height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE85D3A),
+                      color: theme.colorScheme.primary,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.cookie, size: 38, color: Colors.white),
+                    child: Icon(Icons.cookie, size: 38, color: theme.colorScheme.onPrimary),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -110,13 +111,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE85D3A),
-                      foregroundColor: Colors.white,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: isLoading
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary))
                         : const Text('Daftar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -127,7 +128,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     const Text('Sudah punya akun? ', style: TextStyle(fontSize: 14)),
                     GestureDetector(
                       onTap: () => context.pop(),
-                      child: const Text('Masuk', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFE85D3A))),
+                      child: Text('Masuk', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
                     ),
                   ],
                 ),
@@ -153,7 +154,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         filled: true, fillColor: const Color(0xFFF5F5F5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE85D3A), width: 1.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );

@@ -83,12 +83,13 @@ class AdminCategoryListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(adminCategoriesProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kategori Produk'),
-        backgroundColor: const Color(0xFFE85D3A),
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: categories.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -111,10 +112,10 @@ class AdminCategoryListPage extends ConsumerWidget {
                   final cat = cats[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFFFFE8E0),
+                      backgroundColor: theme.colorScheme.primaryContainer,
                       child: Text(
                         (cat['name'] ?? '?').toString().substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Color(0xFFE85D3A), fontWeight: FontWeight.w600),
+                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
                       ),
                     ),
                     title: Text(cat['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -156,8 +157,8 @@ class AdminCategoryListPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showForm(context, ref),
-        backgroundColor: const Color(0xFFE85D3A),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: theme.colorScheme.primary,
+        child: Icon(Icons.add, color: theme.colorScheme.onPrimary),
       ),
     );
   }
@@ -171,7 +172,9 @@ class AdminCategoryListPage extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
+      builder: (ctx) {
+        final sheetTheme = Theme.of(ctx);
+        return Padding(
         padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -184,7 +187,7 @@ class AdminCategoryListPage extends ConsumerWidget {
               decoration: InputDecoration(
                 labelText: 'Nama Kategori',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE85D3A))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: sheetTheme.colorScheme.primary)),
               ),
             ),
             const SizedBox(height: 12),
@@ -193,7 +196,7 @@ class AdminCategoryListPage extends ConsumerWidget {
               decoration: InputDecoration(
                 labelText: 'Deskripsi (opsional)',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE85D3A))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: sheetTheme.colorScheme.primary)),
               ),
               maxLines: 2,
             ),
@@ -216,13 +219,14 @@ class AdminCategoryListPage extends ConsumerWidget {
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE85D3A), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(backgroundColor: sheetTheme.colorScheme.primary, foregroundColor: sheetTheme.colorScheme.onPrimary),
                 child: Text(isEdit ? 'Simpan' : 'Tambah'),
               ),
             ),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 }

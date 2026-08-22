@@ -93,15 +93,24 @@ class OrderData {
 class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   final Dio _dio;
   final Map<String, dynamic> _tenantQp;
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
 
   OrdersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
     load();
   }
 
   Future<void> load() async {
+    _page = 1;
+    _hasMore = true;
     state = const AsyncValue.loading();
     try {
-      final res = await _dio.get('/superadmin/orders', queryParameters: _tenantQp);
+      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
+      final res = await _dio.get('/superadmin/orders', queryParameters: params);
       final data = res.data;
       List list;
       if (data is Map && data.containsKey('data')) {
@@ -111,12 +120,39 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       } else {
         list = [];
       }
+      _hasMore = list.length >= 20;
       state = AsyncValue.data(
         list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList(),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
+    _page++;
+    try {
+      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
+      final res = await _dio.get('/superadmin/orders', queryParameters: params);
+      final data = res.data;
+      List list;
+      if (data is Map && data.containsKey('data')) {
+        list = data['data'];
+      } else if (data is List) {
+        list = data;
+      } else {
+        list = [];
+      }
+      _hasMore = list.length >= 20;
+      final current = state.valueOrNull ?? [];
+      state = AsyncValue.data([
+        ...current,
+        ...list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)),
+      ]);
+    } catch (_) {}
+    _isLoadingMore = false;
   }
 }
 
@@ -145,6 +181,14 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollEndNotification &&
+        notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+      ref.read(ordersProvider.notifier).loadMore();
+    }
+    return false;
   }
 
   String _fmt(double amount) => CurrencyFormatter.idr(amount);
@@ -231,15 +275,26 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
               }
               return RefreshIndicator(
                 onRefresh: () => ref.read(ordersProvider.notifier).load(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  itemCount: list.length,
-                  itemBuilder: (context, index) => _OrderCard(
-                    order: list[index],
-                    fmt: _fmt,
-                    fmtDate: _fmtDate,
-                    statusColor: _statusColor,
-                    statusLabel: _statusLabel,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onScrollNotification,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    itemCount: list.length + (ref.watch(ordersProvider).valueOrNull != null && ref.read(ordersProvider.notifier).hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == list.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      return _OrderCard(
+                        order: list[index],
+                        fmt: _fmt,
+                        fmtDate: _fmtDate,
+                        statusColor: _statusColor,
+                        statusLabel: _statusLabel,
+                      );
+                    },
                   ),
                 ),
               );

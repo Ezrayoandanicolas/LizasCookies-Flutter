@@ -5,8 +5,6 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/providers/tenant_provider.dart';
 
-const _primary = Color(0xFFE85D3A);
-const _bgLight = Color(0xFFFFE8E0);
 const _green = Color(0xFF2E7D32);
 const _red = Color(0xFFC62828);
 const _blue = Color(0xFF1565C0);
@@ -103,26 +101,24 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final pnlAsync = ref.watch(dailyPnlProvider(_dateRange));
 
     return Scaffold(
-      backgroundColor: _bgLight,
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       appBar: AppBar(
-        title: const Text('Laporan & Analitik', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-        backgroundColor: _primary,
+        title: const Text('Laporan & Analitik', style: TextStyle(fontWeight: FontWeight.w700)),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dashboardStatsProvider);
           ref.invalidate(dailyPnlProvider);
         },
-        color: _primary,
+        color: Theme.of(context).colorScheme.primary,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             _buildDateSelector(),
             const SizedBox(height: 16),
             statsAsync.when(
-              loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator(color: _primary))),
+              loading: () => SizedBox(height: 180, child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))),
               error: (e, _) => _errorBox('Gagal memuat statistik', () => ref.invalidate(dashboardStatsProvider)),
               data: (data) => _buildStatsSection(data),
             ),
@@ -136,7 +132,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
             _sectionTitle('Profit & Loss Harian'),
             const SizedBox(height: 8),
             pnlAsync.when(
-              loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: _primary))),
+              loading: () => SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))),
               error: (e, _) => _errorBox('Gagal memuat data P&L', () => ref.invalidate(dailyPnlProvider)),
               data: (data) => _buildPnlSection(data),
             ),
@@ -172,7 +168,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       duration: const Duration(milliseconds: 200),
                       height: 38,
                       decoration: BoxDecoration(
-                        color: selected ? _primary : Colors.grey.shade100,
+                        color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -288,7 +284,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(month, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
-                      Text(_formatCurrency(revenue), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _primary)),
+                      Text(_formatCurrency(revenue), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -299,7 +295,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           Container(
                             height: 22,
                             width: constraints.maxWidth,
-                            decoration: BoxDecoration(color: _bgLight, borderRadius: BorderRadius.circular(6)),
+                            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(6)),
                           ),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 500),
@@ -307,7 +303,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             height: 22,
                             width: constraints.maxWidth * ratio.clamp(0.0, 1.0),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [_primary, Color(0xFFFF8A65)]),
+                              gradient: LinearGradient(colors: [Theme.of(context).colorScheme.primary, Color(0xFFFF8A65)]),
                               borderRadius: BorderRadius.circular(6),
                             ),
                           ),
@@ -465,8 +461,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh, size: 18, color: _primary),
-            label: const Text('Coba Lagi', style: TextStyle(color: _primary)),
+            icon: Icon(Icons.refresh, size: 18, color: Theme.of(context).colorScheme.primary),
+            label: Text('Coba Lagi', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
         ],
       ),
