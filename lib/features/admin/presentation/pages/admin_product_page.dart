@@ -390,22 +390,23 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
 
   Future<void> _uploadImages(String productId) async {
     if (_newImages.isEmpty) return;
-    try {
-      final dio = ref.read(dioClientProvider).dio;
-      final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
-      for (final image in _newImages) {
-        final fileName = image.path.split('/').last;
-        final formData = FormData.fromMap({
-          'file': await MultipartFile.fromFile(image.path, filename: fileName),
-        });
-        await dio.post(
-          '/superadmin/products/$productId/media',
-          data: formData,
-          queryParameters: tenantQp,
-          options: Options(headers: {'Content-Type': 'multipart/form-data'}),
-        );
-      }
-    } catch (_) {}
+    final dio = ref.read(dioClientProvider).dio;
+    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
+    final files = <MultipartFile>[];
+    for (final image in _newImages) {
+      final fileName = image.path.split('/').last;
+      files.add(await MultipartFile.fromFile(image.path, filename: fileName));
+    }
+    final formData = FormData.fromMap({
+      'images': files,
+    });
+    final res = await dio.post(
+      '/superadmin/products/$productId/media',
+      data: formData,
+      queryParameters: tenantQp,
+      options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+    );
+    debugPrint('Upload response: ${res.statusCode} ${res.data}');
   }
 
   Future<void> _save() async {
