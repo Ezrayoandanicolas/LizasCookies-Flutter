@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/providers/tenant_provider.dart';
 import '../../../core/providers/store_provider.dart';
+import '../../../core/utils/image_helper.dart';
 
 class ProductItem {
   final int id;
@@ -28,9 +29,9 @@ class ProductItem {
   factory ProductItem.fromJson(Map<String, dynamic> json) {
     String? img;
     if (json['thumbnail'] != null && json['thumbnail'].toString().isNotEmpty) {
-      img = json['thumbnail'].toString();
+      img = ImageHelper.resolve(json['thumbnail'].toString());
     } else if (json['media'] != null && (json['media'] as List).isNotEmpty) {
-      img = json['media'][0]['path']?.toString();
+      img = ImageHelper.resolve(json['media'][0]['path']?.toString());
     }
 
     double price = 0;

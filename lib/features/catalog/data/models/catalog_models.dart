@@ -1,4 +1,5 @@
 import '../../domain/entities/catalog_entity.dart';
+import '../../../../core/utils/image_helper.dart';
 
 class ProductResponse {
   final int id;
@@ -31,13 +32,14 @@ class ProductResponse {
     final mediaList = json['media'] as List<dynamic>?;
     final images = <String>[];
     if (json['thumbnail'] != null) {
-      images.add(json['thumbnail'].toString());
+      final resolved = ImageHelper.resolve(json['thumbnail'].toString());
+      if (resolved.isNotEmpty) images.add(resolved);
     }
     if (mediaList != null) {
       for (final m in mediaList) {
         if (m is Map && m['path'] != null) {
-          final path = m['path'].toString();
-          if (!images.contains(path)) images.add(path);
+          final resolved = ImageHelper.resolve(m['path'].toString());
+          if (resolved.isNotEmpty && !images.contains(resolved)) images.add(resolved);
         }
       }
     }
@@ -53,7 +55,7 @@ class ProductResponse {
       name: (json['name'] ?? '').toString(),
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
       description: (json['description'] ?? '').toString(),
-      thumbnail: json['thumbnail']?.toString(),
+      thumbnail: ImageHelper.resolve(json['thumbnail']?.toString()),
       images: images,
       categoryId: (json['category_id'] ?? 0).toInt(),
       categoryName: categoryName,

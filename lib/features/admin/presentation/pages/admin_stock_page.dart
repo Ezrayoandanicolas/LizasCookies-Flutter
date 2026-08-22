@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
+import '../../../../core/utils/image_helper.dart';
 import '../../../admin/presentation/pages/admin_product_page.dart';
 
 class StockPage extends ConsumerStatefulWidget {
@@ -156,7 +157,7 @@ class _StockProductCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final thumbnail = product['thumbnail']?.toString();
+    final thumbnail = ImageHelper.resolve(product['thumbnail']?.toString());
     final name = product['name'] ?? '-';
     final sku = product['sku'] ?? '-';
     final selectedStore = ref.watch(selectedAdminStoreProvider);

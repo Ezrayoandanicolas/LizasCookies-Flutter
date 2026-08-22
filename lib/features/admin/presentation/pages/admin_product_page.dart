@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/image_helper.dart';
 
 final adminProductsProvider = StateNotifierProvider<AdminProductsNotifier, AsyncValue<List<Map>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
@@ -197,7 +199,7 @@ class _ProductCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final thumbnail = product['thumbnail']?.toString();
+    final thumbnail = ImageHelper.resolve(product['thumbnail']?.toString());
     final price = product['price']?.toString() ?? '0';
     final name = product['name'] ?? '-';
     final sku = product['sku'] ?? '-';
@@ -226,7 +228,7 @@ class _ProductCard extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Rp ${int.tryParse(price.split('.').first) ?? 0}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            Text(CurrencyFormatter.idr(num.tryParse(price) ?? 0), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             PopupMenuButton(
               itemBuilder: (_) => [
                 const PopupMenuItem(value: 'edit', child: Text('Edit')),
@@ -568,7 +570,7 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
                 children: [
                   ..._existingMedia.asMap().entries.map((entry) {
                     final media = entry.value;
-                    final path = media['path']?.toString() ?? '';
+                    final path = ImageHelper.resolve(media['path']?.toString());
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Stack(
