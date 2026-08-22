@@ -31,7 +31,9 @@ android/gradlew.bat
 ios/build/
 ios/Pods/
 ios/Podfile.lock
+ios/Flutter/ephemeral/
 *.xcworkspace
+!ios/Runner.xcworkspace
 xcuserdata/
 
 # Environment
