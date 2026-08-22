@@ -153,6 +153,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   Color _statusColor(String s) {
     switch (s) {
       case 'pending': return Colors.orange;
+      case 'paid': return Colors.orange;
       case 'processing': return Colors.blue;
       case 'completed': return Colors.green;
       case 'cancelled': return Colors.red;
@@ -163,6 +164,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   String _statusLabel(String s) {
     switch (s) {
       case 'pending': return 'Menunggu';
+      case 'paid': return 'Dibayar';
       case 'processing': return 'Diproses';
       case 'completed': return 'Selesai';
       case 'cancelled': return 'Dibatalkan';
@@ -206,7 +208,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
         ),
         data: (orders) {
           final all = orders;
-          final processed = orders.where((o) => o.status == 'pending' || o.status == 'processing').toList();
+          final processed = orders.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'processing').toList();
           final completed = orders.where((o) => o.status == 'completed').toList();
           final cancelled = orders.where((o) => o.status == 'cancelled').toList();
 
@@ -332,11 +334,15 @@ class _OrderCard extends ConsumerWidget {
     final dio = ref.read(dioClientProvider).dio;
     final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
     try {
-      await dio.post('/superadmin/orders/${order.id}/approve', queryParameters: tenantQp);
+      await dio.put(
+        '/superadmin/orders/${order.id}/status',
+        queryParameters: tenantQp,
+        data: {'status': 'processing'},
+      );
       if (context.mounted) Navigator.pop(context);
       ref.read(ordersProvider.notifier).load();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan disetujui')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan diproses')));
       }
     } catch (e) {
       if (context.mounted) {
@@ -349,11 +355,15 @@ class _OrderCard extends ConsumerWidget {
     final dio = ref.read(dioClientProvider).dio;
     final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
     try {
-      await dio.post('/superadmin/orders/${order.id}/reject', queryParameters: tenantQp);
+      await dio.put(
+        '/superadmin/orders/${order.id}/status',
+        queryParameters: tenantQp,
+        data: {'status': 'cancelled'},
+      );
       if (context.mounted) Navigator.pop(context);
       ref.read(ordersProvider.notifier).load();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan ditolak')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan dibatalkan')));
       }
     } catch (e) {
       if (context.mounted) {
@@ -444,7 +454,7 @@ class _OrderCard extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () => _approveOrder(ctx, ref),
-              child: const Text('Setujui'),
+              child: const Text('Proses'),
             ),
           ] else if (order.status == 'processing') ...[
             TextButton(
