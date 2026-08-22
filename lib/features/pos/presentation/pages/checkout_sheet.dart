@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cart/data/cart_provider.dart';
+import '../../../catalog/data/products_provider.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
 
@@ -108,6 +109,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       if (!mounted) return;
 
       ref.read(cartProvider.notifier).clear();
+      ref.read(productsProvider.notifier).load();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
