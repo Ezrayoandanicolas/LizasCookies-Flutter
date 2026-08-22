@@ -1,0 +1,60 @@
+# Flutter/Dart/Pub
+.dart_tool/
+build/
+*.dart_tool/
+.packages
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+*.m.dart
+
+# Build outputs
+android/app/build/
+android/.gradle/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+*.xcworkspace
+xcuserdata/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Secrets
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+
+# Test
+test_driver/
+
+# CI
+.github/workflows/*.yml.bak

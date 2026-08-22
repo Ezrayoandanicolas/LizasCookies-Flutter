@@ -1,0 +1,494 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/providers/store_provider.dart';
+
+// Product list provider - uses storeQueryProvider for tenant_id + store_id
+final adminProductsProvider = StateNotifierProvider<AdminProductsNotifier, AsyncValue<List<Map>>>((ref) {
+  final dio = ref.watch(dioClientProvider).dio;
+  final storeQp = ref.watch(storeQueryProvider).valueOrNull ?? <String, dynamic>{};
+  return AdminProductsNotifier(dio, storeQp);
+});
+
+// Categories for dropdown
+final adminCategoryListProvider = FutureProvider<List<Map>>((ref) async {
+  final dio = ref.watch(dioClientProvider).dio;
+  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  try {
+    final res = await dio.get('/superadmin/product-categories', queryParameters: tenantQp);
+    final data = res.data;
+    if (data is List) return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    if (data is Map && data.containsKey('data')) return (data['data'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+    return [];
+  } catch (_) {
+    return [];
+  }
+});
+
+// Units for dropdown
+final adminUnitListProvider = FutureProvider<List<Map>>((ref) async {
+  final dio = ref.watch(dioClientProvider).dio;
+  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  try {
+    final res = await dio.get('/units', queryParameters: tenantQp);
+    final data = res.data;
+    if (data is List) return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    if (data is Map && data.containsKey('data')) return (data['data'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+    return [];
+  } catch (_) {
+    return [];
+  }
+});
+
+class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
+  final Dio _dio;
+  final Map<String, dynamic> _tenantQp;
+  int _page = 1;
+  bool _hasMore = true;
+
+  AdminProductsNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
+    load();
+  }
+
+  Future<void> load({String? search}) async {
+    _page = 1;
+    _hasMore = true;
+    state = const AsyncValue.loading();
+    try {
+      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
+      if (search != null) params['search'] = search;
+      final res = await _dio.get('/superadmin/products', queryParameters: params);
+      final data = res.data;
+      List list;
+      if (data is Map && data.containsKey('data')) {
+        list = data['data'];
+      } else if (data is List) {
+        list = data;
+      } else {
+        list = [];
+      }
+      _hasMore = list.length >= 20;
+      state = AsyncValue.data(list.map((e) => Map<String, dynamic>.from(e)).toList());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore) return;
+    _page++;
+    try {
+      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
+      final res = await _dio.get('/superadmin/products', queryParameters: params);
+      final data = res.data;
+      List list;
+      if (data is Map && data.containsKey('data')) {
+        list = data['data'];
+      } else {
+        list = [];
+      }
+      _hasMore = list.length >= 20;
+      final current = state.valueOrNull ?? [];
+      state = AsyncValue.data([...current, ...list.map((e) => Map<String, dynamic>.from(e))]);
+    } catch (_) {}
+  }
+
+  Future<bool> delete(int id) async {
+    try {
+      await _dio.delete('/superadmin/products/$id', queryParameters: _tenantQp);
+      await load();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+// ==================== LIST PAGE ====================
+
+class AdminProductListPage extends ConsumerStatefulWidget {
+  const AdminProductListPage({super.key});
+
+  @override
+  ConsumerState<AdminProductListPage> createState() => _AdminProductListPageState();
+}
+
+class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final products = ref.watch(adminProductsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manajemen Produk'),
+        backgroundColor: const Color(0xFFE85D3A),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: 'Cari produk...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () { _searchCtrl.clear(); ref.read(adminProductsProvider.notifier).load(); })
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onSubmitted: (v) => ref.read(adminProductsProvider.notifier).load(search: v.trim()),
+            ),
+          ),
+          Expanded(
+            child: products.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Text('Gagal memuat', style: TextStyle(color: Colors.grey.shade600)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(onPressed: () => ref.read(adminProductsProvider.notifier).load(), child: const Text('Coba Lagi')),
+                ]),
+              ),
+              data: (items) => items.isEmpty
+                  ? const Center(child: Text('Belum ada produk'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final p = items[index];
+                        return _ProductCard(product: p);
+                      },
+                    ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/admin/product/add'),
+        backgroundColor: const Color(0xFFE85D3A),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _ProductCard extends ConsumerWidget {
+  final Map product;
+  const _ProductCard({required this.product});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final thumbnail = product['thumbnail']?.toString();
+    final price = product['price']?.toString() ?? '0';
+    final name = product['name'] ?? '-';
+    final sku = product['sku'] ?? '-';
+    final category = product['category'];
+    final categoryName = category is Map ? category['name']?.toString() : '-';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(8),
+        leading: Container(
+          width: 56, height: 56,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: thumbnail != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(imageUrl: thumbnail, fit: BoxFit.cover),
+                )
+              : const Icon(Icons.cookie, size: 28, color: Color(0xFFE85D3A)),
+        ),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text('SKU: $sku | $categoryName', style: const TextStyle(fontSize: 12)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Rp ${int.tryParse(price.split('.').first) ?? 0}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            PopupMenuButton(
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+              ],
+              onSelected: (v) async {
+                if (v == 'edit') {
+                  context.push('/admin/product/edit/${product['id']}');
+                } else if (v == 'delete') {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Hapus Produk'),
+                      content: Text('Hapus "$name"?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    final success = await ref.read(adminProductsProvider.notifier).delete(product['id']);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(success ? 'Berhasil dihapus' : 'Gagal menghapus'), backgroundColor: success ? Colors.green : Colors.red),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== ADD / EDIT PAGE ====================
+
+class AdminProductFormPage extends ConsumerStatefulWidget {
+  final String? productId;
+  const AdminProductFormPage({super.key, this.productId});
+
+  @override
+  ConsumerState<AdminProductFormPage> createState() => _AdminProductFormPageState();
+}
+
+class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _skuCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _yieldCtrl = TextEditingController();
+  final _manualCostCtrl = TextEditingController();
+
+  String _type = 'produced';
+  int? _selectedCategoryId;
+  int? _selectedUnitId;
+  bool _isLoading = false;
+
+  bool get isEdit => widget.productId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEdit) _loadProduct();
+  }
+
+  Future<void> _loadProduct() async {
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
+      final res = await dio.get('/superadmin/products/${widget.productId}', queryParameters: tenantQp);
+      final p = res.data;
+      if (p is Map) {
+        setState(() {
+          _nameCtrl.text = p['name']?.toString() ?? '';
+          _skuCtrl.text = p['sku']?.toString() ?? '';
+          _priceCtrl.text = p['price']?.toString() ?? '';
+          _type = p['type']?.toString() ?? 'produced';
+          _selectedCategoryId = p['category_id'] != null ? int.tryParse(p['category_id'].toString()) : null;
+          _selectedUnitId = p['unit_id'] != null ? int.tryParse(p['unit_id'].toString()) : null;
+          _yieldCtrl.text = p['production_yield']?.toString() ?? '';
+          _manualCostCtrl.text = p['manual_cost']?.toString() ?? '';
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _skuCtrl.dispose();
+    _priceCtrl.dispose();
+    _yieldCtrl.dispose();
+    _manualCostCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
+      final data = <String, dynamic>{
+        'name': _nameCtrl.text.trim(),
+        'sku': _skuCtrl.text.trim(),
+        'type': _type,
+        'price': double.tryParse(_priceCtrl.text) ?? 0,
+        if (_selectedCategoryId != null) 'category_id': _selectedCategoryId,
+        if (_selectedUnitId != null) 'unit_id': _selectedUnitId,
+      };
+
+      if (_type == 'produced' && _yieldCtrl.text.isNotEmpty) {
+        data['production_yield'] = double.tryParse(_yieldCtrl.text);
+      }
+      if (_type == 'purchased' && _manualCostCtrl.text.isNotEmpty) {
+        data['manual_cost'] = double.tryParse(_manualCostCtrl.text);
+      }
+
+      if (isEdit) {
+        await dio.put('/superadmin/products/${widget.productId}', data: data, queryParameters: tenantQp);
+      } else {
+        await dio.post('/superadmin/products', data: data, queryParameters: tenantQp);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isEdit ? 'Produk diperbarui' : 'Produk ditambahkan'), backgroundColor: Colors.green),
+        );
+        ref.read(adminProductsProvider.notifier).load();
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = ref.watch(adminCategoryListProvider);
+    final units = ref.watch(adminUnitListProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isEdit ? 'Edit Produk' : 'Tambah Produk'),
+        backgroundColor: const Color(0xFFE85D3A),
+        foregroundColor: Colors.white,
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: _inputDecoration('Nama Produk'),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _skuCtrl,
+              decoration: _inputDecoration('SKU'),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _priceCtrl,
+              decoration: _inputDecoration('Harga'),
+              keyboardType: TextInputType.number,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _type,
+              decoration: _inputDecoration('Tipe Produk'),
+              items: const [
+                DropdownMenuItem(value: 'produced', child: Text('Diproduksi')),
+                DropdownMenuItem(value: 'purchased', child: Text('Dibeli')),
+              ],
+              onChanged: (v) => setState(() => _type = v ?? 'produced'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              decoration: _inputDecoration('Kategori'),
+              items: categories.when(
+                data: (cats) => cats.map<DropdownMenuItem<int>>((c) => DropdownMenuItem(
+                  value: c['id'] as int?,
+                  child: Text(c['name'] ?? '-'),
+                )).toList(),
+                loading: () => const [],
+                error: (_, __) => const [],
+              ),
+              onChanged: (v) => setState(() => _selectedCategoryId = v),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: _selectedUnitId,
+              decoration: _inputDecoration('Satuan'),
+              items: units.when(
+                data: (u) => u.map<DropdownMenuItem<int>>((e) => DropdownMenuItem(
+                  value: e['id'] as int?,
+                  child: Text('${e['name']} (${e['symbol'] ?? ''})'),
+                )).toList(),
+                loading: () => const [],
+                error: (_, __) => const [],
+              ),
+              onChanged: (v) => setState(() => _selectedUnitId = v),
+            ),
+            const SizedBox(height: 12),
+            if (_type == 'produced') ...[
+              TextFormField(
+                controller: _yieldCtrl,
+                decoration: _inputDecoration('Production Yield'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_type == 'purchased') ...[
+              TextFormField(
+                controller: _manualCostCtrl,
+                decoration: _inputDecoration('Biaya Manual (COGS)'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE85D3A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(isEdit ? 'Simpan Perubahan' : 'Tambah Produk', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE85D3A))),
+    );
+  }
+}
