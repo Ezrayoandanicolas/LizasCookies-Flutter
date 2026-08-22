@@ -177,7 +177,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             GoRoute(
               path: '/orders-tab',
               name: 'ordersTab',
-              builder: (_, __) => const OrdersPage(),
+              builder: (_, __) => Consumer(
+                builder: (context, ref, _) {
+                  final auth = ref.watch(authNotifierProvider);
+                  if (auth is Authenticated && (auth.user.isStaff || auth.user.isAdmin)) {
+                    return const OrdersPage();
+                  }
+                  return const MemberOrdersPage();
+                },
+              ),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -388,7 +396,6 @@ class ProfilePage extends ConsumerWidget {
           _menuItem(Icons.shopping_bag, 'Pesanan Saya', () => context.push('/orders')),
           _menuItem(Icons.receipt_long, 'Riwayat Pesanan', () => context.push('/member/orders')),
           _menuItem(Icons.location_on, 'Alamat Saya', () => context.push('/member/addresses')),
-          _menuItem(Icons.favorite, 'Wishlist', () {}),
           _menuItem(themeIcon, 'Mode Tampilan: $themeLabel', () {
             showDialog(
               context: context,
@@ -420,7 +427,30 @@ class ProfilePage extends ConsumerWidget {
               ),
             );
           }),
-          _menuItem(Icons.help_outline, 'Bantuan', () {}),
+          _menuItem(Icons.help_outline, 'Bantuan', () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Bantuan'),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Butuh bantuan? Hubungi kami:'),
+                    SizedBox(height: 12),
+                    Row(children: [Icon(Icons.email, size: 18), SizedBox(width: 8), Text('support@lizascookies.id')]),
+                    SizedBox(height: 8),
+                    Row(children: [Icon(Icons.phone, size: 18), SizedBox(width: 8), Text('0812-3456-7890')]),
+                    SizedBox(height: 8),
+                    Row(children: [Icon(Icons.language, size: 18), SizedBox(width: 8), Text('lizascookies.id')]),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                ],
+              ),
+            );
+          }),
           const Divider(),
           _menuItem(Icons.logout, 'Keluar', () async {
             final confirmed = await showDialog<bool>(

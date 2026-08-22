@@ -3,6 +3,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../cart/data/cart_provider.dart';
 import '../providers/catalog_providers.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -203,7 +204,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: product.stock > 0 ? () {} : null,
+                          onPressed: product.stock > 0 ? () {
+                            ref.read(cartProvider.notifier).addItem(
+                              int.tryParse(product.id) ?? 0,
+                              product.name,
+                              product.price,
+                              image: product.images.isNotEmpty ? product.images.first : null,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${product.name} ditambahkan ke keranjang'),
+                                backgroundColor: const Color(0xFF2E7D32),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          } : null,
                           icon: const Icon(Icons.shopping_cart, size: 20),
                           label: Text(
                             product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis',

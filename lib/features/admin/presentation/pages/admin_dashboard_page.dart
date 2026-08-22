@@ -89,7 +89,7 @@ class AdminDashboardPage extends ConsumerWidget {
             _MenuTile(icon: Icons.money_off, title: 'Pengeluaran', subtitle: 'Catat & kelola pengeluaran', onTap: () => context.push('/admin/expenses')),
             if (user?.isAdmin == true) ...[
               _MenuTile(icon: Icons.people, title: 'Manajemen User', subtitle: 'Kelola staff & member', onTap: () => context.push('/admin/users')),
-              _MenuTile(icon: Icons.store, title: 'Manajemen Toko', subtitle: 'Pengaturan toko', onTap: () {}),
+              _MenuTile(icon: Icons.store, title: 'Manajemen Toko', subtitle: 'Pengaturan toko', onTap: () => context.push('/admin/stores')),
             ],
           ],
         ),
