@@ -18,6 +18,8 @@ class CheckoutSheet extends ConsumerStatefulWidget {
 
 class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   String _paymentMethod = 'Tunai';
+  bool _usePpn = true;
+  final _ppnRate = 0.11;
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   bool _processing = false;
@@ -36,7 +38,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     return cart.total;
   }
 
-  double get _tax => _subtotal * 0.11;
+  double get _tax => _usePpn ? _subtotal * _ppnRate : 0;
   double get _grandTotal => _subtotal + _tax;
 
   double get _amountPaid {
@@ -242,17 +244,45 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   Widget _buildSummarySection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F6F4),
-        borderRadius: BorderRadius.circular(12),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           _summaryRow('Subtotal', CurrencyFormatter.idr(_subtotal)),
-          const SizedBox(height: 8),
-          _summaryRow('PPN (11%)', CurrencyFormatter.idr(_tax)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'PPN (11%)',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Transform.scale(
+                scale: 0.85,
+                child: Switch(
+                  value: _usePpn,
+                  onChanged: (v) => setState(() => _usePpn = v),
+                ),
+              ),
+            ],
+          ),
+          if (_usePpn) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                CurrencyFormatter.idr(_tax),
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ],
           const Divider(height: 24),
           _summaryRow(
             'Total',
