@@ -15,7 +15,7 @@ void main() async {
 
   await initializeDateFormatting('id_ID', null);
 
-  const flavorString = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  const flavorString = String.fromEnvironment('FLAVOR', defaultValue: 'prod');
   final flavor = AppFlavor.values.firstWhere(
     (f) => f.name == flavorString,
     orElse: () => AppFlavor.dev,
