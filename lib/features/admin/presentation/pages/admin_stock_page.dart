@@ -251,13 +251,61 @@ class _StockProductCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const PopupMenuItem(
+                  value: 'sync',
+                  child: Row(
+                    children: [
+                      Icon(Icons.sync, color: Colors.blue, size: 20),
+                      SizedBox(width: 8),
+                      Text('Sync ke Semua Toko'),
+                    ],
+                  ),
+                ),
               ],
-              onSelected: (v) => _showStockDialog(context, ref, v.toString()),
+              onSelected: (v) {
+                if (v == 'sync') {
+                  _syncToAllStores(context, ref);
+                } else {
+                  _showStockDialog(context, ref, v.toString());
+                }
+              },
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _syncToAllStores(BuildContext context, WidgetRef ref) async {
+    final productId = product['id'];
+    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      await dio.post(
+        '/superadmin/products/$productId/sync-all-stores',
+        data: tenantQp,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Berhasil disync ke semua toko'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      String msg = 'Gagal sync';
+      if (e is DioException && e.response?.data != null) {
+        final resp = e.response!.data;
+        msg = resp['message'] ?? resp['error'] ?? msg;
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _showStockDialog(BuildContext context, WidgetRef ref, String action) {

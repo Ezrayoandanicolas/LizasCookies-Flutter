@@ -23,6 +23,12 @@ import '../../features/admin/presentation/pages/admin_product_page.dart';
 import '../../features/admin/presentation/pages/admin_stock_page.dart';
 import '../../features/analytics/presentation/pages/analytics_page.dart';
 import '../../features/expenses/presentation/pages/expense_page.dart';
+import '../../features/admin/presentation/pages/admin_user_page.dart';
+import '../../features/admin/presentation/pages/admin_store_page.dart';
+import '../../features/admin/presentation/pages/admin_expense_category_page.dart';
+import '../../features/member/presentation/pages/member_orders_page.dart';
+import '../../features/member/presentation/pages/member_address_page.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/theme/app_theme.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -51,6 +57,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, __) => const CustomTransitionPage(
           child: OrdersPage(),
           transitionsBuilder: _slideLeftTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/member/orders', name: 'memberOrders',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: MemberOrdersPage(),
+          transitionsBuilder: _slideLeftTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/member/addresses', name: 'memberAddresses',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: MemberAddressPage(),
+          transitionsBuilder: _slideUpTransition,
         ),
       ),
       GoRoute(
@@ -92,6 +112,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/expenses', name: 'adminExpenses',
         pageBuilder: (_, __) => const CustomTransitionPage(
           child: ExpensePage(),
+          transitionsBuilder: _slideLeftTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/admin/users', name: 'adminUsers',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: AdminUserPage(),
+          transitionsBuilder: _slideLeftTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/admin/stores', name: 'adminStores',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: AdminStorePage(),
+          transitionsBuilder: _slideLeftTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/admin/expense-categories', name: 'adminExpenseCategories',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: AdminExpenseCategoryPage(),
           transitionsBuilder: _slideLeftTransition,
         ),
       ),
@@ -191,13 +232,112 @@ Widget _slideUpTransition(
   );
 }
 
-class ForgotPasswordPage extends StatelessWidget {
+class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Lupa Kata Sandi')),
-    body: const Center(child: Text('Fitur lupa kata sandi')),
-  );
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+}
+
+class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  bool _loading = false;
+  bool _submitted = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _loading = true);
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      await dio.post('/v1/forgot-password', data: {'email': _emailCtrl.text.trim()});
+      setState(() => _submitted = true);
+    } catch (_) {
+      setState(() => _submitted = true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Lupa Kata Sandi')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Form(
+            key: _formKey,
+            child: _submitted
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: Column(
+                      children: [
+                        Icon(Icons.support_agent_rounded, size: 72, color: theme.colorScheme.primary),
+                        const SizedBox(height: 24),
+                        Text('Hubungi Admin', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Untuk mereset kata sandi, silakan hubungi admin melalui WhatsApp atau email support kami.',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 32),
+                        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Kembali ke Login')),
+                      ],
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 60),
+                      Icon(Icons.lock_reset_rounded, size: 64, color: theme.colorScheme.primary),
+                      const SizedBox(height: 20),
+                      Text('Reset Kata Sandi', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Masukkan email akun Anda. Kami akan mengarahkan Anda ke admin untuk mereset kata sandi.',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Email wajib diisi';
+                          if (!v.contains('@')) return 'Format email tidak valid';
+                          return null;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'Masukkan email Anda',
+                          prefixIcon: Icon(Icons.email_outlined, size: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton(
+                          onPressed: _loading ? null : _submit,
+                          child: _loading
+                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Kirim', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ProfilePage extends ConsumerWidget {
@@ -246,7 +386,8 @@ class ProfilePage extends ConsumerWidget {
           const SizedBox(height: 24),
           const Divider(),
           _menuItem(Icons.shopping_bag, 'Pesanan Saya', () => context.push('/orders')),
-          _menuItem(Icons.location_on, 'Alamat Saya', () {}),
+          _menuItem(Icons.receipt_long, 'Riwayat Pesanan', () => context.push('/member/orders')),
+          _menuItem(Icons.location_on, 'Alamat Saya', () => context.push('/member/addresses')),
           _menuItem(Icons.favorite, 'Wishlist', () {}),
           _menuItem(themeIcon, 'Mode Tampilan: $themeLabel', () {
             showDialog(

@@ -53,14 +53,8 @@ class DioClient {
       },
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
-          final refreshed = await _tryRefreshToken();
-          if (refreshed) {
-            final secureStorage = _ref.read(secureStorageProvider);
-            final newToken = await secureStorage.getAccessToken();
-            error.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-            final retryResponse = await _dio.fetch(error.requestOptions);
-            return handler.resolve(retryResponse);
-          }
+          final secureStorage = _ref.read(secureStorageProvider);
+          await secureStorage.clearTokens();
         }
         handler.next(error);
       },
@@ -80,28 +74,6 @@ class DioClient {
     }
   }
 
-  Future<bool> _tryRefreshToken() async {
-    try {
-      final secureStorage = _ref.read(secureStorageProvider);
-      final refreshToken = await secureStorage.getRefreshToken();
-      if (refreshToken == null) return false;
-
-      final response = await _dio.post(
-        '/auth/refresh',
-        data: {'refresh_token': refreshToken},
-        options: Options(headers: {'Authorization': null}),
-      );
-
-      if (response.statusCode == 200 && response.data['token'] != null) {
-        await secureStorage.saveTokens(
-          response.data['token'],
-          response.data['refresh_token'] ?? refreshToken,
-        );
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
 }
 
 final dioClientProvider = Provider<DioClient>((ref) => DioClient(ref));

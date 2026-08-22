@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../providers/cart_providers.dart';
-import '../../domain/entities/cart_entity.dart';
+import '../../data/cart_provider.dart';
 
 class CartPage extends ConsumerWidget {
   const CartPage({super.key});
@@ -93,7 +92,7 @@ class CartPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildCartItem(BuildContext context, WidgetRef ref, CartItemEntity item) {
+  Widget _buildCartItem(BuildContext context, WidgetRef ref, CartItem item) {
     return Dismissible(
       key: ValueKey('${item.productId}_${item.variant}'),
       direction: DismissDirection.endToStart,
@@ -120,9 +119,9 @@ class CartPage extends ConsumerWidget {
                 child: SizedBox(
                   width: 64,
                   height: 64,
-                  child: item.imageUrl != null
+                  child: item.image != null
                       ? CachedNetworkImage(
-                          imageUrl: item.imageUrl!,
+                          imageUrl: item.image!,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => const Icon(Icons.cookie, color: AppColors.primaryLight),
                         )
@@ -149,7 +148,7 @@ class CartPage extends ConsumerWidget {
                     ],
                     const SizedBox(height: 6),
                     Text(
-                      'Rp ${((item.discountPrice ?? item.price) * item.quantity).toInt()}',
+                      'Rp ${item.total.toInt()}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,

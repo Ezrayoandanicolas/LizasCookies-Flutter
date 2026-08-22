@@ -1,20 +1,21 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
 
-// Product list provider - uses storeQueryProvider for tenant_id + store_id
 final adminProductsProvider = StateNotifierProvider<AdminProductsNotifier, AsyncValue<List<Map>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
   final storeQp = ref.watch(storeQueryProvider).valueOrNull ?? <String, dynamic>{};
   return AdminProductsNotifier(dio, storeQp);
 });
 
-// Categories for dropdown
 final adminCategoryListProvider = FutureProvider<List<Map>>((ref) async {
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
@@ -29,7 +30,6 @@ final adminCategoryListProvider = FutureProvider<List<Map>>((ref) async {
   }
 });
 
-// Units for dropdown
 final adminUnitListProvider = FutureProvider<List<Map>>((ref) async {
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
@@ -282,11 +282,15 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
   final _priceCtrl = TextEditingController();
   final _yieldCtrl = TextEditingController();
   final _manualCostCtrl = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   String _type = 'produced';
   int? _selectedCategoryId;
   int? _selectedUnitId;
   bool _isLoading = false;
+
+  final List<File> _newImages = [];
+  List<Map<String, dynamic>> _existingMedia = [];
 
   bool get isEdit => widget.productId != null;
 
@@ -312,6 +316,13 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
           _selectedUnitId = p['unit_id'] != null ? int.tryParse(p['unit_id'].toString()) : null;
           _yieldCtrl.text = p['production_yield']?.toString() ?? '';
           _manualCostCtrl.text = p['manual_cost']?.toString() ?? '';
+          final mediaList = p['media'];
+          if (mediaList is List) {
+            _existingMedia = mediaList
+                .where((m) => m is Map && m['id'] != null && m['path'] != null)
+                .map((m) => Map<String, dynamic>.from(m))
+                .toList();
+          }
         });
       }
     } catch (_) {}
@@ -325,6 +336,76 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
     _yieldCtrl.dispose();
     _manualCostCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await _imagePicker.pickMultiImage(imageQuality: 80);
+    if (picked.isNotEmpty) {
+      setState(() {
+        _newImages.addAll(picked.map((x) => File(x.path)));
+      });
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() => _newImages.removeAt(index));
+  }
+
+  Future<void> _deleteExistingMedia(Map<String, dynamic> media) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Gambar'),
+        content: const Text('Hapus gambar ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
+      final mediaId = media['id'];
+      await dio.delete(
+        '/superadmin/products/${widget.productId}/media/$mediaId',
+        queryParameters: tenantQp,
+      );
+      setState(() => _existingMedia.remove(media));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gambar dihapus'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadImages(String productId) async {
+    if (_newImages.isEmpty) return;
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? {};
+      for (final image in _newImages) {
+        final fileName = image.path.split('/').last;
+        final formData = FormData.fromMap({
+          'file': await MultipartFile.fromFile(image.path, filename: fileName),
+        });
+        await dio.post(
+          '/superadmin/products/$productId/media',
+          data: formData,
+          queryParameters: tenantQp,
+          options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _save() async {
@@ -350,11 +431,23 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
         data['manual_cost'] = double.tryParse(_manualCostCtrl.text);
       }
 
+      String productId;
       if (isEdit) {
-        await dio.put('/superadmin/products/${widget.productId}', data: data, queryParameters: tenantQp);
+        productId = widget.productId!;
+        await dio.put('/superadmin/products/$productId', data: data, queryParameters: tenantQp);
       } else {
-        await dio.post('/superadmin/products', data: data, queryParameters: tenantQp);
+        final res = await dio.post('/superadmin/products', data: data, queryParameters: tenantQp);
+        final responseData = res.data;
+        if (responseData is Map && responseData['id'] != null) {
+          productId = responseData['id'].toString();
+        } else if (responseData is Map && responseData['data'] is Map && responseData['data']['id'] != null) {
+          productId = responseData['data']['id'].toString();
+        } else {
+          throw Exception('Tidak dapat membaca ID produk');
+        }
       }
+
+      await _uploadImages(productId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -378,6 +471,7 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
   Widget build(BuildContext context) {
     final categories = ref.watch(adminCategoryListProvider);
     final units = ref.watch(adminUnitListProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -463,6 +557,115 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
               ),
               const SizedBox(height: 12),
             ],
+            const SizedBox(height: 8),
+            Text('Gambar Produk', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  ..._existingMedia.asMap().entries.map((entry) {
+                    final media = entry.value;
+                    final path = media['path']?.toString() ?? '';
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: CachedNetworkImage(
+                              imageUrl: path,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                width: 120,
+                                height: 120,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                width: 120,
+                                height: 120,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: Icon(Icons.broken_image, color: theme.colorScheme.outline),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => _deleteExistingMedia(media),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(Icons.close, size: 16, color: theme.colorScheme.onError),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  ..._newImages.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final file = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(file, width: 120, height: 120, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => _removeNewImage(index),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(Icons.close, size: 16, color: theme.colorScheme.onError),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: theme.colorScheme.outline),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo_outlined, size: 28, color: theme.colorScheme.outline),
+                          const SizedBox(height: 4),
+                          Text('Tambah', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               height: 52,

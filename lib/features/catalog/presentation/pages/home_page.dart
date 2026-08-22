@@ -12,6 +12,8 @@ import '../../../auth/domain/entities/auth_entity.dart';
 const Color _themeColor = AppColors.primary;
 const Color _lightBg = AppColors.primaryContainer;
 
+final _selectedCategoryProvider = StateProvider<String?>((ref) => null);
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -53,6 +55,7 @@ class HomePage extends ConsumerWidget {
                     _buildSectionTitle('Menu'),
                     _buildAdminMenu(context),
                   ],
+                  _buildCategoryFilter(ref, context),
                   _buildSectionTitle('Semua Produk'),
                   _buildProductBody(ref),
                 ],
@@ -151,6 +154,99 @@ class HomePage extends ConsumerWidget {
     );
   }
 
+  Widget _buildCategoryFilter(WidgetRef ref, BuildContext context) {
+    final productsAsync = ref.watch(productsProvider);
+    final theme = Theme.of(context);
+    final selectedCat = ref.watch(_selectedCategoryProvider);
+
+    return productsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (products) {
+        final categories = products
+            .map((p) => p.categoryName)
+            .whereType<String>()
+            .toSet()
+            .toList();
+        if (categories.isEmpty) return const SizedBox.shrink();
+        return Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: categories.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                final isSelected = selectedCat == null;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                  child: FilterChip(
+                    label: const Text('Semua'),
+                    selected: isSelected,
+                    onSelected: (_) =>
+                        ref.read(_selectedCategoryProvider.notifier).state = null,
+                    selectedColor: theme.colorScheme.primaryContainer,
+                    checkmarkColor: theme.colorScheme.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outlineVariant,
+                      ),
+                    ),
+                    elevation: isSelected ? 1 : 0,
+                    shadowColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
+                );
+              }
+              final cat = categories[index - 1];
+              final isSelected = selectedCat == cat;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutBack,
+                child: FilterChip(
+                  label: Text(cat),
+                  selected: isSelected,
+                  onSelected: (_) =>
+                      ref.read(_selectedCategoryProvider.notifier).state =
+                          isSelected ? null : cat,
+                  selectedColor: theme.colorScheme.primaryContainer,
+                  checkmarkColor: theme.colorScheme.primary,
+                  labelStyle: TextStyle(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                  elevation: isSelected ? 1 : 0,
+                  shadowColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildProductBody(WidgetRef ref) {
     final productsAsync = ref.watch(productsProvider);
     return productsAsync.when(
@@ -174,7 +270,12 @@ class HomePage extends ConsumerWidget {
         ),
       ),
       data: (items) {
-        if (items.isEmpty) {
+        final selectedCat = ref.read(_selectedCategoryProvider);
+        var filtered = items;
+        if (selectedCat != null) {
+          filtered = items.where((p) => p.categoryName == selectedCat).toList();
+        }
+        if (filtered.isEmpty) {
           return SizedBox(
             height: 200,
             child: Center(
@@ -192,7 +293,7 @@ class HomePage extends ConsumerWidget {
             ),
           );
         }
-        return _buildProductGrid(ref, items);
+        return _buildProductGrid(ref, filtered);
       },
     );
   }

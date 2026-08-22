@@ -4,26 +4,23 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/providers/tenant_provider.dart';
-import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../../auth/domain/entities/auth_entity.dart';
 
-class OrderItem {
+class MemberOrderItem {
   final String name;
   final int quantity;
   final double price;
 
-  const OrderItem({required this.name, required this.quantity, required this.price});
+  const MemberOrderItem({required this.name, required this.quantity, required this.price});
   double get total => price * quantity;
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) {
+  factory MemberOrderItem.fromJson(Map<String, dynamic> json) {
     String name = '-';
     if (json['product'] is Map) {
       name = (json['product']['name'] ?? '-').toString();
     } else {
       name = (json['product_name'] ?? json['name'] ?? '-').toString();
     }
-    return OrderItem(
+    return MemberOrderItem(
       name: name,
       quantity: (json['quantity'] ?? 1).toInt(),
       price: double.tryParse((json['price'] ?? 0).toString()) ?? 0,
@@ -31,25 +28,23 @@ class OrderItem {
   }
 }
 
-class OrderData {
+class MemberOrderData {
   final int id;
   final String status;
   final double totalAmount;
   final double discountAmount;
   final String paymentMethod;
-  final String orderSource;
   final DateTime? createdAt;
-  final List<OrderItem> items;
+  final List<MemberOrderItem> items;
   final String? notes;
   final String? storeName;
 
-  const OrderData({
+  const MemberOrderData({
     required this.id,
     required this.status,
     required this.totalAmount,
     this.discountAmount = 0,
     this.paymentMethod = '-',
-    this.orderSource = '-',
     this.createdAt,
     this.items = const [],
     this.notes,
@@ -67,21 +62,20 @@ class OrderData {
     return '$firstItem + ${count - 1} lainnya';
   }
 
-  factory OrderData.fromJson(Map<String, dynamic> json) {
-    final itemsList = <OrderItem>[];
+  factory MemberOrderData.fromJson(Map<String, dynamic> json) {
+    final itemsList = <MemberOrderItem>[];
     if (json['items'] is List) {
       itemsList.addAll(
-        (json['items'] as List).map((e) => OrderItem.fromJson(e as Map<String, dynamic>)),
+        (json['items'] as List).map((e) => MemberOrderItem.fromJson(e as Map<String, dynamic>)),
       );
     }
 
-    return OrderData(
+    return MemberOrderData(
       id: (json['id'] ?? 0).toInt(),
       status: (json['status'] ?? 'pending').toString().toLowerCase(),
       totalAmount: double.tryParse((json['total_amount'] ?? json['total'] ?? 0).toString()) ?? 0,
       discountAmount: double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
       paymentMethod: (json['payment_method'] ?? '-').toString(),
-      orderSource: (json['order_source'] ?? '-').toString(),
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
       items: itemsList,
       notes: json['notes']?.toString(),
@@ -90,18 +84,17 @@ class OrderData {
   }
 }
 
-class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
+class MemberOrdersNotifier extends StateNotifier<AsyncValue<List<MemberOrderData>>> {
   final Dio _dio;
-  final Map<String, dynamic> _tenantQp;
 
-  OrdersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
+  MemberOrdersNotifier(this._dio) : super(const AsyncValue.loading()) {
     load();
   }
 
   Future<void> load() async {
     state = const AsyncValue.loading();
     try {
-      final res = await _dio.get('/superadmin/orders', queryParameters: _tenantQp);
+      final res = await _dio.get('/member/orders');
       final data = res.data;
       List list;
       if (data is Map && data.containsKey('data')) {
@@ -112,7 +105,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
         list = [];
       }
       state = AsyncValue.data(
-        list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList(),
+        list.map((e) => MemberOrderData.fromJson(e as Map<String, dynamic>)).toList(),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -120,19 +113,18 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   }
 }
 
-final ordersProvider = StateNotifierProvider<OrdersNotifier, AsyncValue<List<OrderData>>>((ref) {
+final memberOrdersProvider = StateNotifierProvider<MemberOrdersNotifier, AsyncValue<List<MemberOrderData>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
-  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-  return OrdersNotifier(dio, tenantQp);
+  return MemberOrdersNotifier(dio);
 });
 
-class OrdersPage extends ConsumerStatefulWidget {
-  const OrdersPage({super.key});
+class MemberOrdersPage extends ConsumerStatefulWidget {
+  const MemberOrdersPage({super.key});
   @override
-  ConsumerState<OrdersPage> createState() => _OrdersPageState();
+  ConsumerState<MemberOrdersPage> createState() => _MemberOrdersPageState();
 }
 
-class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProviderStateMixin {
+class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -172,7 +164,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final ordersAsync = ref.watch(ordersProvider);
+    final ordersAsync = ref.watch(memberOrdersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -198,7 +190,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
               Text('Gagal memuat pesanan', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => ref.read(ordersProvider.notifier).load(),
+                onPressed: () => ref.read(memberOrdersProvider.notifier).load(),
                 child: const Text('Coba Lagi'),
               ),
             ],
@@ -228,11 +220,11 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
                 );
               }
               return RefreshIndicator(
-                onRefresh: () => ref.read(ordersProvider.notifier).load(),
+                onRefresh: () => ref.read(memberOrdersProvider.notifier).load(),
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   itemCount: list.length,
-                  itemBuilder: (context, index) => _OrderCard(
+                  itemBuilder: (context, index) => _MemberOrderCard(
                     order: list[index],
                     fmt: _fmt,
                     fmtDate: _fmtDate,
@@ -249,14 +241,14 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   }
 }
 
-class _OrderCard extends ConsumerWidget {
-  final OrderData order;
+class _MemberOrderCard extends StatelessWidget {
+  final MemberOrderData order;
   final String Function(double) fmt;
   final String Function(DateTime?) fmtDate;
   final Color Function(String) statusColor;
   final String Function(String) statusLabel;
 
-  const _OrderCard({
+  const _MemberOrderCard({
     required this.order,
     required this.fmt,
     required this.fmtDate,
@@ -265,13 +257,13 @@ class _OrderCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final color = statusColor(order.status);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _showDetail(context, ref),
+        onTap: () => _showDetail(context),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -328,63 +320,7 @@ class _OrderCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _approveOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.post('/superadmin/orders/${order.id}/approve', queryParameters: tenantQp);
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan disetujui')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  Future<void> _rejectOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.post('/superadmin/orders/${order.id}/reject', queryParameters: tenantQp);
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan ditolak')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  Future<void> _completeOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.put(
-        '/superadmin/orders/${order.id}/status',
-        queryParameters: tenantQp,
-        data: {'status': 'completed'},
-      );
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan selesai')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  void _showDetail(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  void _showDetail(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -397,7 +333,6 @@ class _OrderCard extends ConsumerWidget {
               _row('Status', statusLabel(order.status)),
               _row('Tanggal', fmtDate(order.createdAt)),
               _row('Pembayaran', order.paymentMethod.toUpperCase()),
-              _row('Sumber', order.orderSource),
               if (order.storeName != null) _row('Toko', order.storeName!),
               if (order.discountAmount > 0) _row('Diskon', fmt(order.discountAmount)),
               const Divider(height: 24),
@@ -432,32 +367,7 @@ class _OrderCard extends ConsumerWidget {
           ),
         ),
         actions: [
-          if (order.status == 'pending') ...[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Tutup'),
-            ),
-            FilledButton(
-              onPressed: () => _rejectOrder(ctx, ref),
-              style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
-              child: const Text('Tolak'),
-            ),
-            FilledButton(
-              onPressed: () => _approveOrder(ctx, ref),
-              child: const Text('Setujui'),
-            ),
-          ] else if (order.status == 'processing') ...[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Tutup'),
-            ),
-            FilledButton(
-              onPressed: () => _completeOrder(ctx, ref),
-              child: const Text('Selesai'),
-            ),
-          ] else ...[
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-          ],
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
         ],
       ),
     );

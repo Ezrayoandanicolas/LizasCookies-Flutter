@@ -70,6 +70,38 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
     });
     await fetch();
   }
+
+  Future<bool> update(int id, {
+    required String description,
+    required String amount,
+    required int expenseCategoryId,
+    required String expenseDate,
+    String? notes,
+  }) async {
+    try {
+      await _dio.put('/superadmin/expenses/$id', data: {
+        'description': description,
+        'amount': amount,
+        'expense_category_id': expenseCategoryId,
+        'expense_date': expenseDate,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      });
+      await fetch();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> remove(int id) async {
+    try {
+      await _dio.delete('/superadmin/expenses/$id');
+      await fetch();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 class ExpensePage extends ConsumerStatefulWidget {
@@ -137,8 +169,12 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: expenses.length,
-                  itemBuilder: (context, index) =>
-                      _ExpenseCard(expense: expenses[index], currencyFormat: _currencyFormat),
+                  itemBuilder: (context, index) => _ExpenseCard(
+                    expense: expenses[index],
+                    currencyFormat: _currencyFormat,
+                    onEdit: () => _showEditExpenseSheet(context, expenses[index]),
+                    onDelete: () => _confirmDelete(context, expenses[index]),
+                  ),
                 ),
         ),
       ),
@@ -165,15 +201,66 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
       ),
     );
   }
+
+  void _showEditExpenseSheet(BuildContext context, Map<String, dynamic> expense) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: _AddExpenseSheet(
+          expense: expense,
+          onSuccess: () {
+            Navigator.of(ctx).pop();
+            ref.read(expensesProvider.notifier).fetch();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Map<String, dynamic> expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Pengeluaran'),
+        content: Text('Hapus "${expense['description']}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final success = await ref.read(expensesProvider.notifier).remove(expense['id']);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(success ? 'Berhasil dihapus' : 'Gagal menghapus'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ));
+      }
+    }
+  }
 }
 
 class _ExpenseCard extends StatelessWidget {
   final Map<String, dynamic> expense;
   final NumberFormat currencyFormat;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _ExpenseCard({
     required this.expense,
     required this.currencyFormat,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -199,33 +286,33 @@ class _ExpenseCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              currencyFormat.format(double.tryParse(amount.toString()) ?? 0),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFE85D3A),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Text(
-                  currencyFormat.format(double.tryParse(amount.toString()) ?? 0),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFE85D3A),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               children: [
                 _Tag(label: categoryName),
@@ -238,7 +325,7 @@ class _ExpenseCard extends StatelessWidget {
               ],
             ),
             if (notes != null && notes.toString().isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 notes,
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
@@ -247,6 +334,18 @@ class _ExpenseCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+        trailing: PopupMenuButton(
+          itemBuilder: (_) => [
+            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+            const PopupMenuItem(
+                value: 'delete',
+                child: Text('Hapus', style: TextStyle(color: Colors.red))),
+          ],
+          onSelected: (v) {
+            if (v == 'edit') onEdit();
+            if (v == 'delete') onDelete();
+          },
         ),
       ),
     );
@@ -280,8 +379,9 @@ class _Tag extends StatelessWidget {
 
 class _AddExpenseSheet extends ConsumerStatefulWidget {
   final VoidCallback onSuccess;
+  final Map<String, dynamic>? expense;
 
-  const _AddExpenseSheet({required this.onSuccess});
+  const _AddExpenseSheet({required this.onSuccess, this.expense});
 
   @override
   ConsumerState<_AddExpenseSheet> createState() => _AddExpenseSheetState();
@@ -298,6 +398,26 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
   DateTime _selectedDate = DateTime.now();
   int? _selectedCategoryId;
   bool _saving = false;
+
+  bool get _isEdit => widget.expense != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEdit) {
+      final e = widget.expense!;
+      _descCtrl.text = e['description'] ?? '';
+      _amountCtrl.text = e['amount']?.toString() ?? '';
+      _notesCtrl.text = e['notes'] ?? '';
+      _selectedCategoryId = e['expense_category_id'] as int?;
+      final dateStr = e['expense_date'] as String?;
+      if (dateStr != null && dateStr.isNotEmpty) {
+        try {
+          _selectedDate = DateTime.parse(dateStr);
+        } catch (_) {}
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -340,14 +460,29 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      await ref.read(expensesProvider.notifier).add(
-            description: _descCtrl.text.trim(),
-            amount: _amountCtrl.text.trim().replaceAll('.', '').replaceAll(',', ''),
-            expenseCategoryId: _selectedCategoryId!,
-            expenseDate: dateStr,
-            notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-          );
-      widget.onSuccess();
+      final amount = _amountCtrl.text.trim().replaceAll('.', '').replaceAll(',', '');
+      if (_isEdit) {
+        final success = await ref.read(expensesProvider.notifier).update(
+              widget.expense!['id'],
+              description: _descCtrl.text.trim(),
+              amount: amount,
+              expenseCategoryId: _selectedCategoryId!,
+              expenseDate: dateStr,
+              notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+            );
+        if (success) {
+          widget.onSuccess();
+        }
+      } else {
+        await ref.read(expensesProvider.notifier).add(
+              description: _descCtrl.text.trim(),
+              amount: amount,
+              expenseCategoryId: _selectedCategoryId!,
+              expenseDate: dateStr,
+              notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+            );
+        widget.onSuccess();
+      }
     } on DioException catch (e) {
       if (mounted) {
         final msg = e.response?.data is Map
@@ -397,9 +532,9 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                 ),
               ),
             ),
-            const Text(
-              'Tambah Pengeluaran',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              _isEdit ? 'Edit Pengeluaran' : 'Tambah Pengeluaran',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Form(

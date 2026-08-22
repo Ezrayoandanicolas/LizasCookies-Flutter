@@ -123,20 +123,64 @@ class _POSPageState extends ConsumerState<POSPage> {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       final isSelected = _selectedCategory == null;
-                      return ChoiceChip(
-                        label: const Text('Semua'),
-                        selected: isSelected,
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = null),
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutBack,
+                        child: FilterChip(
+                          label: const Text('Semua'),
+                          selected: isSelected,
+                          onSelected: (_) =>
+                              setState(() => _selectedCategory = null),
+                          selectedColor: theme.colorScheme.primaryContainer,
+                          checkmarkColor: theme.colorScheme.primary,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outlineVariant,
+                            ),
+                          ),
+                          elevation: isSelected ? 1 : 0,
+                          shadowColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                        ),
                       );
                     }
                     final cat = categories[index - 1];
                     final isSelected = _selectedCategory == cat;
-                    return ChoiceChip(
-                      label: Text(cat),
-                      selected: isSelected,
-                      onSelected: (_) =>
-                          setState(() => _selectedCategory = cat),
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutBack,
+                      child: FilterChip(
+                        label: Text(cat),
+                        selected: isSelected,
+                        onSelected: (_) =>
+                            setState(() => _selectedCategory = cat),
+                        selectedColor: theme.colorScheme.primaryContainer,
+                        checkmarkColor: theme.colorScheme.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        elevation: isSelected ? 1 : 0,
+                        shadowColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                      ),
                     );
                   },
                 ),
