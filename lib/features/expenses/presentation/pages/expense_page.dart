@@ -55,36 +55,40 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
   }
 
   Future<void> add({
-    required String description,
+    required String title,
     required String amount,
     required int expenseCategoryId,
     required String expenseDate,
-    String? notes,
+    String? description,
+    String? paymentMethod,
   }) async {
     await _dio.post('/superadmin/expenses', data: {
-      'description': description,
+      'title': title,
       'amount': amount,
       'expense_category_id': expenseCategoryId,
       'expense_date': expenseDate,
-      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (description != null && description.isNotEmpty) 'description': description,
+      if (paymentMethod != null && paymentMethod.isNotEmpty) 'payment_method': paymentMethod,
     });
     await fetch();
   }
 
   Future<bool> update(int id, {
-    required String description,
+    required String title,
     required String amount,
     required int expenseCategoryId,
     required String expenseDate,
-    String? notes,
+    String? description,
+    String? paymentMethod,
   }) async {
     try {
       await _dio.put('/superadmin/expenses/$id', data: {
-        'description': description,
+        'title': title,
         'amount': amount,
         'expense_category_id': expenseCategoryId,
         'expense_date': expenseDate,
-        if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (description != null && description.isNotEmpty) 'description': description,
+        if (paymentMethod != null && paymentMethod.isNotEmpty) 'payment_method': paymentMethod,
       });
       await fetch();
       return true;
@@ -265,7 +269,7 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final description = expense['description'] ?? '-';
+    final description = expense['title']?.toString() ?? expense['description'] ?? '-';
     final amount = expense['amount'] ?? '0';
     final expenseDate = expense['expense_date'] ?? '';
     final category = expense['expense_category'];
@@ -397,6 +401,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
 
   DateTime _selectedDate = DateTime.now();
   int? _selectedCategoryId;
+  String? _selectedPaymentMethod = 'cash';
   bool _saving = false;
 
   bool get _isEdit => widget.expense != null;
@@ -406,10 +411,11 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
     super.initState();
     if (_isEdit) {
       final e = widget.expense!;
-      _descCtrl.text = e['description'] ?? '';
+      _descCtrl.text = e['title']?.toString() ?? e['description'] ?? '';
       _amountCtrl.text = e['amount']?.toString() ?? '';
       _notesCtrl.text = e['notes'] ?? '';
       _selectedCategoryId = e['expense_category_id'] as int?;
+      _selectedPaymentMethod = e['payment_method']?.toString() ?? 'cash';
       final dateStr = e['expense_date'] as String?;
       if (dateStr != null && dateStr.isNotEmpty) {
         try {
@@ -464,22 +470,24 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
       if (_isEdit) {
         final success = await ref.read(expensesProvider.notifier).update(
               widget.expense!['id'],
-              description: _descCtrl.text.trim(),
+              title: _descCtrl.text.trim(),
               amount: amount,
               expenseCategoryId: _selectedCategoryId!,
               expenseDate: dateStr,
-              notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              description: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              paymentMethod: _selectedPaymentMethod,
             );
         if (success) {
           widget.onSuccess();
         }
       } else {
         await ref.read(expensesProvider.notifier).add(
-              description: _descCtrl.text.trim(),
+              title: _descCtrl.text.trim(),
               amount: amount,
               expenseCategoryId: _selectedCategoryId!,
               expenseDate: dateStr,
-              notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              description: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              paymentMethod: _selectedPaymentMethod,
             );
         widget.onSuccess();
       }
@@ -544,9 +552,9 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                   TextFormField(
                     controller: _descCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Deskripsi',
+                      labelText: 'Judul',
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
+                      prefixIcon: Icon(Icons.title),
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
@@ -566,6 +574,24 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                       if (n == null || n <= 0) return 'Masukkan angka valid';
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    value: _selectedPaymentMethod,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Metode Bayar',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.payment),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('Tunai')),
+                      DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
+                      DropdownMenuItem(value: 'qris', child: Text('QRIS')),
+                      DropdownMenuItem(value: 'card', child: Text('Kartu')),
+                      DropdownMenuItem(value: 'other', child: Text('Lainnya')),
+                    ],
+                    onChanged: (v) => setState(() => _selectedPaymentMethod = v),
                   ),
                   const SizedBox(height: 14),
                   categoriesAsync.when(
