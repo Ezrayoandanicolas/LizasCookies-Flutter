@@ -60,7 +60,7 @@ class AppConfig {
         _instance = const AppConfig(
           flavor: AppFlavor.prod,
           appName: 'LizasCookies',
-          baseUrl: 'https://lizascookies.id',
+          baseUrl: 'https://api.lizascookies.id',
           apiVersion: 'v1',
           enableLogging: false,
           enableCrashlytics: true,

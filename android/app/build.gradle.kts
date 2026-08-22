@@ -16,11 +16,26 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.lizascookies.dev"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationId = "com.lizascookies.dev"
+        }
+        create("staging") {
+            dimension = "env"
+            applicationId = "com.lizascookies.staging"
+        }
+        create("prod") {
+            dimension = "env"
+            applicationId = "com.lizascookies"
+        }
     }
 
     buildTypes {
