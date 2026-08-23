@@ -308,6 +308,7 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
 
   String _type = 'produced';
   int? _selectedCategoryId;
+  List<int> _selectedCategoryIds = [];
   int? _selectedUnitId;
   bool _isLoading = false;
 
@@ -336,6 +337,15 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
           _type = p['type']?.toString() ?? 'produced';
           _selectedCategoryId = p['category_id'] != null ? int.tryParse(p['category_id'].toString()) : null;
           _selectedUnitId = p['unit_id'] != null ? int.tryParse(p['unit_id'].toString()) : null;
+          final cats = p['categories'];
+          if (cats is List) {
+            _selectedCategoryIds = cats.map((e) {
+              if (e is Map) return e['id'] as int?;
+              return int.tryParse(e.toString());
+            }).whereType<int>().toList();
+          } else if (_selectedCategoryId != null) {
+            _selectedCategoryIds = [_selectedCategoryId!];
+          }
           _yieldCtrl.text = p['production_yield']?.toString() ?? '';
           _manualCostCtrl.text = p['manual_cost']?.toString() ?? '';
           final mediaList = p['media'];
@@ -443,7 +453,7 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
         'sku': _skuCtrl.text.trim(),
         'type': _type,
         'price': double.tryParse(_priceCtrl.text) ?? 0,
-        if (_selectedCategoryId != null) 'category_id': _selectedCategoryId,
+        'category_ids': _selectedCategoryIds,
         if (_selectedUnitId != null) 'unit_id': _selectedUnitId,
       };
 
@@ -536,18 +546,46 @@ class _AdminProductFormPageState extends ConsumerState<AdminProductFormPage> {
               onChanged: (v) => setState(() => _type = v ?? 'produced'),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              value: _selectedCategoryId,
-              decoration: _inputDecoration('Kategori'),
-              items: categories.when(
-                data: (cats) => cats.map<DropdownMenuItem<int>>((c) => DropdownMenuItem(
-                  value: c['id'] as int?,
-                  child: Text(c['name'] ?? '-'),
-                )).toList(),
-                loading: () => const [],
-                error: (_, __) => const [],
-              ),
-              onChanged: (v) => setState(() => _selectedCategoryId = v),
+            categories.when(
+              data: (cats) {
+                if (cats.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Kategori', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: cats.map((c) {
+                        final catId = c['id'] as int?;
+                        final isSelected = _selectedCategoryIds.contains(catId);
+                        return FilterChip(
+                          label: Text(c['name'] ?? '-'),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                if (catId != null) _selectedCategoryIds.add(catId);
+                              } else {
+                                _selectedCategoryIds.remove(catId);
+                              }
+                            });
+                          },
+                          selectedColor: theme.colorScheme.primaryContainer,
+                          checkmarkColor: theme.colorScheme.primary,
+                          labelStyle: TextStyle(
+                            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(

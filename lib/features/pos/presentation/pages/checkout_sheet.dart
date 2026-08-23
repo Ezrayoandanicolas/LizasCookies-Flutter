@@ -222,6 +222,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   Widget _buildItemSection(CartState cart) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -233,32 +234,79 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         const SizedBox(height: 8),
         ...cart.items.map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${CurrencyFormatter.idr(item.price)} / pcs',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
                       children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500),
+                        IconButton(
+                          icon: Icon(
+                            item.quantity <= 1 ? Icons.delete_outline : Icons.remove_circle_outline,
+                            size: 22,
+                            color: item.quantity <= 1 ? theme.colorScheme.error : theme.colorScheme.primary,
+                          ),
+                          onPressed: () {
+                            if (item.quantity <= 1) {
+                              ref.read(cartProvider.notifier).removeItem(item.productId);
+                            } else {
+                              ref.read(cartProvider.notifier).updateQuantity(item.productId, item.quantity - 1);
+                            }
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${item.quantity} x ${CurrencyFormatter.idr(item.price)}',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[600]),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            '${item.quantity}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            size: 22,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onPressed: () {
+                            ref.read(cartProvider.notifier).updateQuantity(item.productId, item.quantity + 1);
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),
-                  ),
-                  Text(
-                    CurrencyFormatter.idr(item.total),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      CurrencyFormatter.idr(item.total),
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             )),
       ],

@@ -221,12 +221,11 @@ class _POSPageState extends ConsumerState<POSPage> {
                 }
                 return GridView.builder(
                   padding: const EdgeInsets.all(12),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.72,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 8 : 4,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 0.5,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) =>
@@ -275,7 +274,8 @@ class _ProductCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
+          AspectRatio(
+            aspectRatio: 1,
             child: Hero(
               tag: 'product_${product.id}',
               child: Container(
@@ -302,53 +302,43 @@ class _ProductCard extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   product.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   CurrencyFormatter.idr(product.price),
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.primary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.inventory_2_outlined,
-                        size: 12,
-                        color: product.stock > 0
-                            ? theme.colorScheme.onSurfaceVariant
-                            : theme.colorScheme.error),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Stok: ${product.stock}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: product.stock > 0
-                            ? theme.colorScheme.onSurfaceVariant
-                            : theme.colorScheme.error,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  'Stok: ${product.stock}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: product.stock > 0
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.error,
+                    fontSize: 10,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const Spacer(),
                 if (qtyInCart > 0)
                   _QtyControls(productId: product.id, qty: qtyInCart)
                 else
                   SizedBox(
                     width: double.infinity,
-                    height: 34,
+                    height: 28,
                     child: FilledButton.tonal(
                       onPressed: () {
                         ref.read(cartProvider.notifier).addItem(
@@ -361,11 +351,11 @@ class _ProductCard extends ConsumerWidget {
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                       child: const Text('Tambah',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                     ),
                   ),
               ],
@@ -389,36 +379,36 @@ class _QtyControls extends ConsumerWidget {
     final primaryContainer = theme.colorScheme.primaryContainer;
 
     return Container(
-      height: 34,
+      height: 28,
       decoration: BoxDecoration(
         color: primaryContainer,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
           Expanded(
             child: InkWell(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(6)),
               onTap: () => ref.read(cartProvider.notifier).updateQuantity(productId, qty - 1),
-              child: Center(child: Icon(Icons.remove, size: 16, color: primary)),
+              child: Center(child: Icon(Icons.remove, size: 14, color: primary)),
             ),
           ),
           Container(width: 1, color: primary.withValues(alpha: 0.2)),
           SizedBox(
-            width: 36,
+            width: 28,
             child: Center(
               child: Text(
                 '$qty',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: primary),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: primary),
               ),
             ),
           ),
           Container(width: 1, color: primary.withValues(alpha: 0.2)),
           Expanded(
             child: InkWell(
-              borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+              borderRadius: const BorderRadius.horizontal(right: Radius.circular(6)),
               onTap: () => ref.read(cartProvider.notifier).updateQuantity(productId, qty + 1),
-              child: Center(child: Icon(Icons.add, size: 16, color: primary)),
+              child: Center(child: Icon(Icons.add, size: 14, color: primary)),
             ),
           ),
         ],
