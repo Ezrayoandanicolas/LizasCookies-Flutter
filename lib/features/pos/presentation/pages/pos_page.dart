@@ -225,7 +225,7 @@ class _POSPageState extends ConsumerState<POSPage> {
                     crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 8 : 4,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 0.52,
+                    childAspectRatio: 0.45,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) =>
@@ -274,8 +274,8 @@ class _ProductCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            flex: 5,
+          AspectRatio(
+            aspectRatio: 1,
             child: Container(
               color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
               child: product.image != null && product.image!.isNotEmpty
@@ -299,40 +299,40 @@ class _ProductCard extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  CurrencyFormatter.idr(product.price),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.primary,
-                    fontSize: 10,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Stok: ${product.stock}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: product.stock > 0
-                        ? theme.colorScheme.onSurfaceVariant
-                        : theme.colorScheme.error,
-                    fontSize: 9,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+            child: Text(
+              product.name,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
+            child: Text(
+              CurrencyFormatter.idr(product.price),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
+                fontSize: 10,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
+            child: Text(
+              'Stok: ${product.stock}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: product.stock > 0
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.error,
+                fontSize: 9,
+              ),
+            ),
+          ),
+          const Spacer(),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
             child: qtyInCart > 0
