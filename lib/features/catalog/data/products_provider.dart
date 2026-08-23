@@ -98,12 +98,15 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
   final Ref _ref;
 
   ProductsNotifier(this._dio, this._tenantQp, this._storeQp, this._ref) : super(const AsyncValue.loading()) {
-    load();
+    if (_tenantQp.containsKey('tenant_id')) {
+      load();
+    }
   }
 
   String get _cacheKey {
+    final tenantId = _tenantQp['tenant_id'] ?? 'all';
     final storeId = _storeQp['store_id'] ?? 'all';
-    return 'products_$storeId';
+    return 'products_${tenantId}_$storeId';
   }
 
   Future<void> load({String? search}) async {
@@ -161,7 +164,16 @@ final productsProvider = StateNotifierProvider<ProductsNotifier, AsyncValue<List
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   final storeQp = ref.watch(storeQueryProvider).valueOrNull ?? <String, dynamic>{};
-  return ProductsNotifier(dio, tenantQp, storeQp, ref);
+  final notifier = ProductsNotifier(dio, tenantQp, storeQp, ref);
+  if (!tenantQp.containsKey('tenant_id')) {
+    ref.listen(tenantQueryProvider, (prev, next) {
+      final newTenantQp = next.valueOrNull;
+      if (newTenantQp != null && newTenantQp.containsKey('tenant_id')) {
+        notifier.load();
+      }
+    });
+  }
+  return notifier;
 });
 
 final productsCacheProvider = Provider<List<ProductItem>>((ref) {
