@@ -108,18 +108,24 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         final dio = ref.read(dioClientProvider).dio;
         await dio.post('/cashier/pos/orders', data: body);
         orderSentOnline = true;
-      } catch (_) {
-        final orderId = const Uuid().v4();
-        final orderData = {
-          'id': orderId,
-          'endpoint': '/cashier/pos/orders',
-          'body': body,
-          'status': 'pending_sync',
-          'retry_count': 0,
-          'created_at': DateTime.now().toIso8601String(),
-        };
-        await LocalStorage.saveOfflineOrder(orderId, orderData);
-        ref.read(productsProvider.notifier).decreaseStock(items);
+      } catch (e) {
+        debugPrint('API failed, saving offline: $e');
+        try {
+          final orderId = const Uuid().v4();
+          final orderData = <String, dynamic>{
+            'id': orderId,
+            'endpoint': '/cashier/pos/orders',
+            'body': body,
+            'status': 'pending_sync',
+            'retry_count': 0,
+            'created_at': DateTime.now().toIso8601String(),
+          };
+          await LocalStorage.saveOfflineOrder(orderId, orderData);
+          ref.read(productsProvider.notifier).decreaseStock(items);
+        } catch (e2) {
+          debugPrint('Offline save also failed: $e2');
+          rethrow;
+        }
       }
 
       if (!mounted) return;
