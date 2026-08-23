@@ -223,8 +223,14 @@ class _ProductCard extends ConsumerWidget {
     final price = product['price']?.toString() ?? '0';
     final name = product['name'] ?? '-';
     final sku = product['sku'] ?? '-';
-    final category = product['category'];
-    final categoryName = category is Map ? category['name']?.toString() : '-';
+    final cats = product['categories'];
+    String catDisplay = '-';
+    if (cats is List && cats.isNotEmpty) {
+      catDisplay = cats.map((c) => c is Map ? c['name']?.toString() : c?.toString()).whereType<String>().join(', ');
+    } else {
+      final category = product['category'];
+      if (category is Map) catDisplay = category['name']?.toString() ?? '-';
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -244,7 +250,7 @@ class _ProductCard extends ConsumerWidget {
               : Icon(Icons.cookie, size: 28, color: Theme.of(context).colorScheme.primary),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text('SKU: $sku | $categoryName', style: const TextStyle(fontSize: 12)),
+        subtitle: Text('SKU: $sku | $catDisplay', style: const TextStyle(fontSize: 12)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
