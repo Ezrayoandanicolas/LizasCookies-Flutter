@@ -115,7 +115,7 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
     final updated = current.map((p) {
       final item = items.firstWhere(
         (e) => e['product_id'] == p.id,
-        orElse: () => {},
+        orElse: () => <String, dynamic>{},
       );
       if (item.isEmpty) return p;
       final qty = (item['quantity'] ?? 0) as int;
