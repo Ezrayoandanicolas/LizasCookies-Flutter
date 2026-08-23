@@ -458,6 +458,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   Widget _buildCashSection() {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -483,6 +484,31 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
+            ),
+            suffixIcon: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton(
+                onPressed: () {
+                  final total = _grandTotal.toInt();
+                  final formatted = total.toString().replaceAllMapped(
+                    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                    (m) => '${m[1]}.',
+                  );
+                  _amountController.value = TextEditingValue(
+                    text: formatted,
+                    selection: TextSelection.collapsed(offset: formatted.length),
+                  );
+                  setState(() {});
+                },
+                child: Text(
+                  'Uang Pas',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
             ),
           ),
           style: const TextStyle(
