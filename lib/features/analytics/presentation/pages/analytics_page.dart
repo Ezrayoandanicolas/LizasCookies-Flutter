@@ -10,10 +10,15 @@ const _red = Color(0xFFC62828);
 const _blue = Color(0xFF1565C0);
 const _orange = Color(0xFFEF6C00);
 
-final dashboardStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final dashboardStatsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, dateRange) async {
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-  final res = await dio.get('/superadmin/dashboard/stats', queryParameters: tenantQp);
+  final parts = dateRange.split('|');
+  final res = await dio.get('/superadmin/dashboard/stats', queryParameters: {
+    ...tenantQp,
+    'start_date': parts[0],
+    'end_date': parts[1],
+  });
   return res.data as Map<String, dynamic>;
 });
 
@@ -97,7 +102,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final statsAsync = ref.watch(dashboardStatsProvider);
+    final statsAsync = ref.watch(dashboardStatsProvider(_dateRange));
     final pnlAsync = ref.watch(dailyPnlProvider(_dateRange));
 
     return Scaffold(
@@ -119,7 +124,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
             const SizedBox(height: 16),
             statsAsync.when(
               loading: () => SizedBox(height: 180, child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))),
-              error: (e, _) => _errorBox('Gagal memuat statistik', () => ref.invalidate(dashboardStatsProvider)),
+              error: (e, _) => _errorBox('Gagal memuat statistik', () => ref.invalidate(dashboardStatsProvider(_dateRange))),
               data: (data) => _buildStatsSection(data),
             ),
             const SizedBox(height: 20),
