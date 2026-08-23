@@ -131,7 +131,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       if (!mounted) return;
 
       ref.read(cartProvider.notifier).clear();
-      ref.read(productsProvider.notifier).load();
+      if (orderSentOnline) {
+        ref.read(productsProvider.notifier).load();
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

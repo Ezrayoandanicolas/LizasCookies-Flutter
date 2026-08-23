@@ -6,10 +6,12 @@ import '../../core/config/app_config.dart';
 import '../../core/network/connectivity_provider.dart' show connectivityProvider, ConnectivityStatus;
 import '../../core/network/dio_client.dart';
 import '../../core/storage/local_storage.dart';
+import '../../features/catalog/data/products_provider.dart';
 
 class SyncService {
   final Ref _ref;
   ProviderSubscription<ConnectivityStatus>? _connectivitySubscription;
+  Timer? _periodicTimer;
 
   SyncService(this._ref);
 
@@ -17,12 +19,18 @@ class SyncService {
     _connectivitySubscription = _ref.listen<ConnectivityStatus>(
       connectivityProvider,
       (previous, current) {
-        if (current == ConnectivityStatus.online &&
-            previous != ConnectivityStatus.online) {
+        if (current == ConnectivityStatus.online) {
           processPendingOrders();
         }
       },
     );
+
+    _periodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final current = _ref.read(connectivityProvider);
+      if (current == ConnectivityStatus.online) {
+        processPendingOrders();
+      }
+    });
 
     final current = _ref.read(connectivityProvider);
     if (current == ConnectivityStatus.online) {
@@ -32,6 +40,9 @@ class SyncService {
 
   Future<void> processPendingOrders() async {
     final orders = LocalStorage.getAllPendingOrders();
+    if (orders.isEmpty) return;
+
+    bool anySynced = false;
 
     for (final order in orders) {
       final id = order['id'] as String;
@@ -48,16 +59,24 @@ class SyncService {
         final dio = _ref.read(dioClientProvider).dio;
         await dio.post(endpoint, data: body);
         await LocalStorage.removeOfflineOrder(id);
+        anySynced = true;
       } catch (_) {
         final updated = Map<String, dynamic>.from(order);
         updated['retry_count'] = retryCount + 1;
         await LocalStorage.saveOfflineOrder(id, updated);
       }
     }
+
+    if (anySynced) {
+      try {
+        _ref.read(productsProvider.notifier).load();
+      } catch (_) {}
+    }
   }
 
   void dispose() {
     _connectivitySubscription?.close();
+    _periodicTimer?.cancel();
   }
 }
 
