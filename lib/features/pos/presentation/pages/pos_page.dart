@@ -225,7 +225,7 @@ class _POSPageState extends ConsumerState<POSPage> {
                     crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 8 : 4,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 0.65,
+                    childAspectRatio: 0.52,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) =>
@@ -275,95 +275,90 @@ class _ProductCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            flex: 3,
-            child: Hero(
-              tag: 'product_${product.id}',
-              child: Container(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                child: product.image != null && product.image!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: product.image!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Center(
-                          child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
-                        ),
-                        errorWidget: (_, __, ___) => Icon(
-                          Icons.cookie,
-                          size: 32,
-                          color: theme.colorScheme.primary,
-                        ),
-                      )
-                    : Icon(
+            flex: 5,
+            child: Container(
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+              child: product.image != null && product.image!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: product.image!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Center(
+                        child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                      ),
+                      errorWidget: (_, __, ___) => Icon(
                         Icons.cookie,
                         size: 32,
                         color: theme.colorScheme.primary,
                       ),
-              ),
+                    )
+                  : Icon(
+                      Icons.cookie,
+                      size: 32,
+                      color: theme.colorScheme.primary,
+                    ),
             ),
           ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
                   ),
-                  const Spacer(),
-                  Text(
-                    CurrencyFormatter.idr(product.price),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.primary,
-                      fontSize: 10,
-                    ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  CurrencyFormatter.idr(product.price),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                    fontSize: 10,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Stok: ${product.stock}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: product.stock > 0
-                          ? theme.colorScheme.onSurfaceVariant
-                          : theme.colorScheme.error,
-                      fontSize: 9,
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Stok: ${product.stock}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: product.stock > 0
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.error,
+                    fontSize: 9,
                   ),
-                  const SizedBox(height: 4),
-                  if (qtyInCart > 0)
-                    _QtyControls(productId: product.id, qty: qtyInCart)
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      height: 24,
-                      child: FilledButton.tonal(
-                        onPressed: () {
-                          ref.read(cartProvider.notifier).addItem(
-                                product.id,
-                                product.name,
-                                product.price,
-                                image: product.image,
-                              );
-                        },
-                        style: FilledButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        child: const Text('Tambah',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+            child: qtyInCart > 0
+                ? _QtyControls(productId: product.id, qty: qtyInCart)
+                : SizedBox(
+                    width: double.infinity,
+                    height: 26,
+                    child: FilledButton.tonal(
+                      onPressed: () {
+                        ref.read(cartProvider.notifier).addItem(
+                              product.id,
+                              product.name,
+                              product.price,
+                              image: product.image,
+                            );
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text('Tambah',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
           ),
         ],
       ),
