@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../cart/data/cart_provider.dart';
 import '../../../catalog/data/products_provider.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/connectivity_provider.dart';
+import '../../../../core/storage/local_storage.dart';
 import '../../../../core/utils/currency_formatter.dart';
 
 
@@ -82,7 +85,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     setState(() => _processing = true);
 
     try {
-      final dio = ref.read(dioClientProvider).dio;
+      final connectivity = ref.read(connectivityProvider);
+      final isOnline = connectivity == ConnectivityStatus.online;
 
       final items = cart.items
           .map((item) => {
@@ -102,8 +106,21 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         body['discount_amount'] = 0;
       }
 
-      // X-Store-Id header is set by Dio interceptor
-      await dio.post('/cashier/pos/orders', data: body);
+      if (isOnline) {
+        final dio = ref.read(dioClientProvider).dio;
+        await dio.post('/cashier/pos/orders', data: body);
+      } else {
+        final orderId = const Uuid().v4();
+        final orderData = {
+          'id': orderId,
+          'endpoint': '/cashier/pos/orders',
+          'body': body,
+          'status': 'pending_sync',
+          'retry_count': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+        await LocalStorage.saveOfflineOrder(orderId, orderData);
+      }
 
       if (!mounted) return;
 
@@ -111,9 +128,13 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       ref.read(productsProvider.notifier).load();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pembayaran berhasil!'),
-          backgroundColor: Color(0xFF2E7D32),
+        SnackBar(
+          content: Text(
+            isOnline
+                ? 'Pembayaran berhasil!'
+                : 'Order tersimpan offline, akan disync saat online',
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
         ),
       );
 

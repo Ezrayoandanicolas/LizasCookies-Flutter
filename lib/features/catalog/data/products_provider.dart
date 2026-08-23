@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/network/connectivity_provider.dart' show connectivityProvider, ConnectivityStatus;
 import '../../../core/providers/tenant_provider.dart';
 import '../../../core/providers/store_provider.dart';
+import '../../../core/storage/local_storage.dart';
 import '../../../core/utils/image_helper.dart';
 
 class ProductItem {
@@ -62,24 +66,57 @@ class ProductItem {
       stock: stock,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'sku': sku,
+    'price': price,
+    'thumbnail': image,
+    'category': categoryName != null ? {'name': categoryName} : null,
+    'type': type,
+    'stock': stock,
+  };
 }
 
 class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
   final Dio _dio;
   final Map<String, dynamic> _tenantQp;
   final Map<String, dynamic> _storeQp;
+  final Ref _ref;
 
-  ProductsNotifier(this._dio, this._tenantQp, this._storeQp) : super(const AsyncValue.loading()) {
+  ProductsNotifier(this._dio, this._tenantQp, this._storeQp, this._ref) : super(const AsyncValue.loading()) {
     load();
+  }
+
+  String get _cacheKey {
+    final storeId = _storeQp['store_id'] ?? 'all';
+    return 'products_$storeId';
   }
 
   Future<void> load({String? search}) async {
     state = const AsyncValue.loading();
+
+    final cached = LocalStorage.getCachedProducts(_cacheKey);
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final list = jsonDecode(cached) as List;
+        state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
+      } catch (_) {}
+    }
+
+    final connectivity = _ref.read(connectivityProvider);
+    if (connectivity == ConnectivityStatus.offline) {
+      if (state is! AsyncData) {
+        state = const AsyncValue.data([]);
+      }
+      return;
+    }
+
     try {
       final params = <String, dynamic>{..._tenantQp, ..._storeQp, 'per_page': 100};
       if (search != null && search.isNotEmpty) params['search'] = search;
 
-      // Use POS endpoint if store_id is available, otherwise member endpoint
       String endpoint = '/member/products';
       if (_storeQp.containsKey('store_id')) {
         endpoint = '/cashier/pos/products';
@@ -95,8 +132,14 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
       } else {
         list = [];
       }
-      state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e)).toList());
+
+      final products = list.map((e) => ProductItem.fromJson(e)).toList();
+      state = AsyncValue.data(products);
+
+      final encoded = jsonEncode(list);
+      LocalStorage.cacheProducts(_cacheKey, encoded);
     } catch (e, st) {
+      if (state is AsyncData) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -106,5 +149,10 @@ final productsProvider = StateNotifierProvider<ProductsNotifier, AsyncValue<List
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   final storeQp = ref.watch(storeQueryProvider).valueOrNull ?? <String, dynamic>{};
-  return ProductsNotifier(dio, tenantQp, storeQp);
+  return ProductsNotifier(dio, tenantQp, storeQp, ref);
+});
+
+final productsCacheProvider = Provider<List<ProductItem>>((ref) {
+  final asyncProducts = ref.watch(productsProvider);
+  return asyncProducts.valueOrNull ?? [];
 });

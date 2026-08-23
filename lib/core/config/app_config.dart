@@ -91,6 +91,9 @@ class AppConstants {
   static const String categoriesCacheBoxName = 'categories_cache';
   static const String addressesBoxName = 'addresses';
   static const String notificationsBoxName = 'notifications';
+  static const String syncQueueBoxName = 'sync_queue';
+  static const String offlineStockBoxName = 'offline_stock';
+  static const String offlineOrdersBoxName = 'offline_orders';
   
   // Pagination
   static const int defaultPageSize = 20;

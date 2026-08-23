@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/config/app_config.dart';
+import '../../core/network/connectivity_provider.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
@@ -487,15 +488,35 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class MainScaffold extends ConsumerWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
   const MainScaffold({required this.navigationShell, super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
+  bool _showSyncedBanner = false;
+  ConnectivityStatus? _previousStatus;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final user = authState is Authenticated ? authState.user : null;
     final isStaff = user?.isStaff ?? false;
+    final connectivity = ref.watch(connectivityProvider);
+
+    if (_previousStatus == ConnectivityStatus.offline &&
+        connectivity == ConnectivityStatus.online) {
+      _previousStatus = connectivity;
+      _showSyncedBanner = true;
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSyncedBanner = false);
+      });
+    } else {
+      _previousStatus = connectivity;
+    }
 
     final destinations = isStaff
         ? const [
@@ -516,17 +537,61 @@ class MainScaffold extends ConsumerWidget {
       return destIndex;
     }
 
+    final isOffline = connectivity == ConnectivityStatus.offline;
+
     return Scaffold(
-      body: navigationShell,
+      body: Column(
+        children: [
+          if (isOffline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.orange.shade700,
+              child: const SafeArea(
+                bottom: false,
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_off, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Mode Offline - Data akan disync saat online',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_showSyncedBanner && !isOffline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.green.shade600,
+              child: const SafeArea(
+                bottom: false,
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Tersync',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(child: widget.navigationShell),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: isStaff
-            ? navigationShell.currentIndex
-            : (navigationShell.currentIndex >= 3
-                ? navigationShell.currentIndex - 1
-                : navigationShell.currentIndex),
+            ? widget.navigationShell.currentIndex
+            : (widget.navigationShell.currentIndex >= 3
+                ? widget.navigationShell.currentIndex - 1
+                : widget.navigationShell.currentIndex),
         onDestinationSelected: (index) {
           final branchIndex = _mapDestIndex(index, isStaff);
-          navigationShell.goBranch(branchIndex);
+          widget.navigationShell.goBranch(branchIndex);
         },
         destinations: destinations,
       ),

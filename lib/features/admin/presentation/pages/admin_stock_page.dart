@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/config/app_config.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
@@ -444,6 +447,32 @@ class _StockProductCard extends ConsumerWidget {
                   }
 
                   Navigator.pop(ctx);
+
+                  final connectivity = ref.read(connectivityProvider);
+                  if (connectivity == ConnectivityStatus.offline) {
+                    final box = Hive.box(AppConstants.offlineStockBoxName);
+                    await box.add({
+                      'type': action,
+                      'product_id': product['id'],
+                      'store_id': selectedStore.id,
+                      'quantity': qty,
+                      if (action == 'add' && double.tryParse(costCtrl.text) != null)
+                        'cost': double.parse(costCtrl.text),
+                      if (action == 'remove' && reasonCtrl.text.isNotEmpty)
+                        'reason': reasonCtrl.text,
+                      'timestamp': DateTime.now().toIso8601String(),
+                    });
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Stock tersimpan offline, akan disync saat online'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
+                    return;
+                  }
 
                   final dio = ref.read(dioClientProvider).dio;
                   final tenantQp =

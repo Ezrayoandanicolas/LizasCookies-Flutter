@@ -11,6 +11,9 @@ class LocalStorage {
   static late Box _categoriesCacheBox;
   static late Box _addressesBox;
   static late Box _notificationsBox;
+  static late Box _syncQueueBox;
+  static late Box _offlineOrdersBox;
+  static late Box _offlineStockBox;
 
   static Future<void> init() async {
     final appDocDir = await getApplicationDocumentsDirectory();
@@ -21,6 +24,9 @@ class LocalStorage {
     _categoriesCacheBox = await Hive.openBox(AppConstants.categoriesCacheBoxName);
     _addressesBox = await Hive.openBox(AppConstants.addressesBoxName);
     _notificationsBox = await Hive.openBox(AppConstants.notificationsBoxName);
+    _syncQueueBox = await Hive.openBox(AppConstants.syncQueueBoxName);
+    _offlineOrdersBox = await Hive.openBox(AppConstants.offlineOrdersBoxName);
+    _offlineStockBox = await Hive.openBox(AppConstants.offlineStockBoxName);
   }
 
   // Cart
@@ -72,6 +78,31 @@ class LocalStorage {
   static String? getNotifications() => _notificationsBox.get('notifications');
 
   static Future<void> clearNotifications() async => _notificationsBox.delete('notifications');
+
+  // Sync Queue
+  static Box get syncQueueBox => _syncQueueBox;
+
+  // Offline Orders
+  static Box get offlineOrdersBox => _offlineOrdersBox;
+
+  static Future<void> saveOfflineOrder(String key, Map<String, dynamic> order) async =>
+      _offlineOrdersBox.put(key, order);
+
+  static Map<String, dynamic>? getOfflineOrder(String key) =>
+      _offlineOrdersBox.get(key);
+
+  static List<Map<String, dynamic>> getAllPendingOrders() {
+    return _offlineOrdersBox.values
+        .where((e) => e is Map)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  static Future<void> removeOfflineOrder(String key) async =>
+      _offlineOrdersBox.delete(key);
+
+  // Offline Stock
+  static Box get offlineStockBox => _offlineStockBox;
 
   // Generic
   static Future<void> put(String boxName, String key, dynamic value) async {
