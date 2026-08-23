@@ -85,9 +85,6 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     setState(() => _processing = true);
 
     try {
-      final connectivity = ref.read(connectivityProvider);
-      var isOnline = connectivity == ConnectivityStatus.online;
-
       final items = cart.items
           .map((item) => {
                 'product_id': item.productId,
@@ -106,25 +103,12 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         body['discount_amount'] = 0;
       }
 
-      if (isOnline) {
-        try {
-          final dio = ref.read(dioClientProvider).dio;
-          await dio.post('/cashier/pos/orders', data: body);
-        } catch (_) {
-          final orderId = const Uuid().v4();
-          final orderData = {
-            'id': orderId,
-            'endpoint': '/cashier/pos/orders',
-            'body': body,
-            'status': 'pending_sync',
-            'retry_count': 0,
-            'created_at': DateTime.now().toIso8601String(),
-          };
-          await LocalStorage.saveOfflineOrder(orderId, orderData);
-          ref.read(productsProvider.notifier).decreaseStock(items);
-          isOnline = false;
-        }
-      } else {
+      bool orderSentOnline = false;
+      try {
+        final dio = ref.read(dioClientProvider).dio;
+        await dio.post('/cashier/pos/orders', data: body);
+        orderSentOnline = true;
+      } catch (_) {
         final orderId = const Uuid().v4();
         final orderData = {
           'id': orderId,
@@ -135,7 +119,6 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           'created_at': DateTime.now().toIso8601String(),
         };
         await LocalStorage.saveOfflineOrder(orderId, orderData);
-
         ref.read(productsProvider.notifier).decreaseStock(items);
       }
 
@@ -147,7 +130,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isOnline
+            orderSentOnline
                 ? 'Pembayaran berhasil!'
                 : 'Order tersimpan offline, akan disync saat online',
           ),
