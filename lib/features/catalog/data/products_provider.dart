@@ -109,6 +109,34 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
     return 'products_${tenantId}_$storeId';
   }
 
+  void decreaseStock(List<Map<String, dynamic>> items) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = current.map((p) {
+      final item = items.firstWhere(
+        (e) => e['product_id'] == p.id,
+        orElse: () => {},
+      );
+      if (item.isEmpty) return p;
+      final qty = (item['quantity'] ?? 0) as int;
+      return ProductItem(
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        price: p.price,
+        image: p.image,
+        categoryName: p.categoryName,
+        categories: p.categories,
+        type: p.type,
+        stock: (p.stock - qty).clamp(0, 99999),
+      );
+    }).toList();
+    state = AsyncValue.data(updated);
+
+    final encoded = jsonEncode(updated.map((p) => p.toJson()).toList());
+    LocalStorage.cacheProducts(_cacheKey, encoded);
+  }
+
   Future<void> load({String? search}) async {
     state = const AsyncValue.loading();
 

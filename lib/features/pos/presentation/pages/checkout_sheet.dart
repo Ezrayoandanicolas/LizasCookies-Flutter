@@ -86,7 +86,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
     try {
       final connectivity = ref.read(connectivityProvider);
-      final isOnline = connectivity == ConnectivityStatus.online;
+      var isOnline = connectivity == ConnectivityStatus.online;
 
       final items = cart.items
           .map((item) => {
@@ -107,8 +107,23 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       }
 
       if (isOnline) {
-        final dio = ref.read(dioClientProvider).dio;
-        await dio.post('/cashier/pos/orders', data: body);
+        try {
+          final dio = ref.read(dioClientProvider).dio;
+          await dio.post('/cashier/pos/orders', data: body);
+        } catch (_) {
+          final orderId = const Uuid().v4();
+          final orderData = {
+            'id': orderId,
+            'endpoint': '/cashier/pos/orders',
+            'body': body,
+            'status': 'pending_sync',
+            'retry_count': 0,
+            'created_at': DateTime.now().toIso8601String(),
+          };
+          await LocalStorage.saveOfflineOrder(orderId, orderData);
+          ref.read(productsProvider.notifier).decreaseStock(items);
+          isOnline = false;
+        }
       } else {
         final orderId = const Uuid().v4();
         final orderData = {
@@ -120,6 +135,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           'created_at': DateTime.now().toIso8601String(),
         };
         await LocalStorage.saveOfflineOrder(orderId, orderData);
+
+        ref.read(productsProvider.notifier).decreaseStock(items);
       }
 
       if (!mounted) return;
