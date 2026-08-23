@@ -225,7 +225,7 @@ class _POSPageState extends ConsumerState<POSPage> {
                     crossAxisCount: MediaQuery.of(context).orientation == Orientation.landscape ? 8 : 4,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 0.45,
+                    childAspectRatio: 0.55,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) =>
@@ -305,7 +305,7 @@ class _ProductCard extends ConsumerWidget {
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
-              maxLines: 2,
+              maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
           ),
