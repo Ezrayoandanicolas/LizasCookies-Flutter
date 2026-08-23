@@ -106,8 +106,7 @@ class _POSPageState extends ConsumerState<POSPage> {
             error: (_, __) => const SizedBox.shrink(),
             data: (products) {
               final categories = products
-                  .map((p) => p.categoryName)
-                  .whereType<String>()
+                  .expand((p) => p.categories)
                   .toSet()
                   .toList();
               if (categories.isEmpty) return const SizedBox.shrink();
@@ -203,7 +202,7 @@ class _POSPageState extends ConsumerState<POSPage> {
                 }
                 if (_selectedCategory != null) {
                   filtered = filtered
-                      .where((p) => p.categoryName == _selectedCategory)
+                      .where((p) => p.categories.contains(_selectedCategory))
                       .toList();
                 }
                 if (filtered.isEmpty) {

@@ -164,8 +164,7 @@ class HomePage extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (products) {
         final categories = products
-            .map((p) => p.categoryName)
-            .whereType<String>()
+            .expand((p) => p.categories)
             .toSet()
             .toList();
         if (categories.isEmpty) return const SizedBox.shrink();
@@ -273,7 +272,7 @@ class HomePage extends ConsumerWidget {
         final selectedCat = ref.read(_selectedCategoryProvider);
         var filtered = items;
         if (selectedCat != null) {
-          filtered = items.where((p) => p.categoryName == selectedCat).toList();
+          filtered = items.where((p) => p.categories.contains(selectedCat)).toList();
         }
         if (filtered.isEmpty) {
           return SizedBox(

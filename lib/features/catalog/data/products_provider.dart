@@ -16,6 +16,7 @@ class ProductItem {
   final double price;
   final String? image;
   final String? categoryName;
+  final List<String> categories;
   final String? type;
   final int stock;
 
@@ -26,6 +27,7 @@ class ProductItem {
     required this.price,
     this.image,
     this.categoryName,
+    this.categories = const [],
     this.type,
     this.stock = 0,
   });
@@ -44,10 +46,16 @@ class ProductItem {
     }
 
     String? catName;
-    if (json['category'] is Map) {
+    List<String> cats = [];
+    if (json['categories'] is List && (json['categories'] as List).isNotEmpty) {
+      cats = (json['categories'] as List).map((e) => e.toString()).toList();
+      catName = cats.first;
+    } else if (json['category'] is Map) {
       catName = json['category']['name']?.toString();
+      if (catName != null) cats = [catName];
     } else if (json['category'] is String) {
       catName = json['category'];
+      if (catName != null) cats = [catName!];
     }
 
     int stock = 0;
@@ -64,6 +72,7 @@ class ProductItem {
       price: price,
       image: img,
       categoryName: catName,
+      categories: cats,
       type: json['type']?.toString(),
       stock: stock,
     );
@@ -75,6 +84,7 @@ class ProductItem {
     'sku': sku,
     'price': price,
     'thumbnail': image,
+    'categories': categories,
     'category': categoryName != null ? {'name': categoryName} : null,
     'type': type,
     'stock': stock,
