@@ -46,6 +46,8 @@ class ProductItem {
     String? catName;
     if (json['category'] is Map) {
       catName = json['category']['name']?.toString();
+    } else if (json['category'] is String) {
+      catName = json['category'];
     }
 
     int stock = 0;
