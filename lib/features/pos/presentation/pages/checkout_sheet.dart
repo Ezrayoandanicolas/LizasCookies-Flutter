@@ -86,7 +86,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
     try {
       final items = cart.items
-          .map((item) => {
+          .map((item) => <String, dynamic>{
                 'product_id': item.productId,
                 'quantity': item.quantity,
               })
