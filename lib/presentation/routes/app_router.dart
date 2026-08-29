@@ -29,6 +29,7 @@ import '../../features/admin/presentation/pages/admin_store_page.dart';
 import '../../features/admin/presentation/pages/admin_expense_category_page.dart';
 import '../../features/member/presentation/pages/member_orders_page.dart';
 import '../../features/member/presentation/pages/member_address_page.dart';
+import '../../features/sync/presentation/pages/sync_status_page.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -142,6 +143,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, __) => const CustomTransitionPage(
           child: AdminProductFormPage(),
           transitionsBuilder: _slideUpTransition,
+        ),
+      ),
+      GoRoute(
+        path: '/sync-status', name: 'syncStatus',
+        pageBuilder: (_, __) => const CustomTransitionPage(
+          child: SyncStatusPage(),
+          transitionsBuilder: _slideLeftTransition,
         ),
       ),
       GoRoute(
@@ -397,6 +405,7 @@ class ProfilePage extends ConsumerWidget {
           _menuItem(Icons.shopping_bag, 'Pesanan Saya', () => context.push('/orders')),
           _menuItem(Icons.receipt_long, 'Riwayat Pesanan', () => context.push('/member/orders')),
           _menuItem(Icons.location_on, 'Alamat Saya', () => context.push('/member/addresses')),
+          _menuItem(Icons.sync, 'Sinkronisasi', () => context.push('/sync-status')),
           _menuItem(themeIcon, 'Mode Tampilan: $themeLabel', () {
             showDialog(
               context: context,

@@ -14,6 +14,7 @@ class LocalStorage {
   static late Box _syncQueueBox;
   static late Box _offlineOrdersBox;
   static late Box _offlineStockBox;
+  static late Box _syncHistoryBox;
 
   static Future<void> init() async {
     final appDocDir = await getApplicationDocumentsDirectory();
@@ -27,6 +28,7 @@ class LocalStorage {
     _syncQueueBox = await Hive.openBox(AppConstants.syncQueueBoxName);
     _offlineOrdersBox = await Hive.openBox(AppConstants.offlineOrdersBoxName);
     _offlineStockBox = await Hive.openBox(AppConstants.offlineStockBoxName);
+    _syncHistoryBox = await Hive.openBox(AppConstants.syncHistoryBoxName);
   }
 
   // Cart
@@ -103,6 +105,28 @@ class LocalStorage {
 
   // Offline Stock
   static Box get offlineStockBox => _offlineStockBox;
+
+  // Sync History
+  static Box get syncHistoryBox => _syncHistoryBox;
+
+  static Future<void> addSyncHistory(Map<String, dynamic> item) async {
+    await _syncHistoryBox.put(item['id'], item);
+  }
+
+  static List<Map<String, dynamic>> getAllSyncHistory() {
+    final items = _syncHistoryBox.values
+        .where((e) => e is Map)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    items.sort((a, b) {
+      final ta = DateTime.tryParse(a['timestamp'] ?? '') ?? DateTime(2000);
+      final tb = DateTime.tryParse(b['timestamp'] ?? '') ?? DateTime(2000);
+      return tb.compareTo(ta);
+    });
+    return items;
+  }
+
+  static Future<void> clearSyncHistory() async => _syncHistoryBox.clear();
 
   // Generic
   static Future<void> put(String boxName, String key, dynamic value) async {
