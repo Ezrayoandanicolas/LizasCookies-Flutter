@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../auth/presentation/providers/auth_providers.dart';
-import '../../auth/domain/entities/auth_entity.dart';
 import '../../../core/storage/secure_storage.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -25,7 +23,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 800),
     );
 
     _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -56,39 +54,22 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
     final secureStorage = ref.read(secureStorageProvider);
 
-    // Step 1: Check tenant
     final savedTenantId = await secureStorage.getSelectedTenantId();
     if (!mounted) return;
+
     if (savedTenantId == null) {
       context.go('/tenant-select');
       return;
     }
 
-    // Step 2: Check auth
-    final authState = ref.read(authNotifierProvider);
-    if (authState is Authenticated) {
-      await _autoSelectStoreAndGoHome(secureStorage);
-    } else if (authState is AuthLoading) {
-      ref.listen<AuthState>(authNotifierProvider, (prev, next) {
-        if (next is Authenticated) {
-          _autoSelectStoreAndGoHome(secureStorage);
-        } else if (next is Unauthenticated || next is AuthError) {
-          context.go('/login');
-        }
-      });
+    final accessToken = await secureStorage.getAccessToken();
+    if (!mounted) return;
+
+    if (accessToken != null && accessToken.isNotEmpty) {
+      context.go('/');
     } else {
       context.go('/login');
     }
-  }
-
-  Future<void> _autoSelectStoreAndGoHome(SecureStorage secureStorage) async {
-    if (!mounted) return;
-    final savedStoreId = await secureStorage.getSelectedStoreId();
-    if (savedStoreId == null) {
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-    if (!mounted) return;
-    context.go('/');
   }
 
   @override

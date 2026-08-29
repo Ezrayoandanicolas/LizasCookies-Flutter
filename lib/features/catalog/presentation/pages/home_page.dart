@@ -22,6 +22,7 @@ class HomePage extends ConsumerWidget {
     final productsAsync = ref.watch(productsProvider);
     final cartState = ref.watch(cartProvider);
     final authState = ref.watch(authNotifierProvider);
+    final theme = Theme.of(context);
 
     String userName = 'Teman';
     bool isAdmin = false;
@@ -42,6 +43,61 @@ class HomePage extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          if (productsAsync is AsyncLoading)
+            const LinearProgressIndicator(minHeight: 3),
+          if (productsAsync is AsyncLoading)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: theme.colorScheme.primaryContainer,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Mengunduh produk...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (productsAsync is AsyncError)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: theme.colorScheme.errorContainer,
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, size: 14, color: theme.colorScheme.error),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat produk',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.read(productsProvider.notifier).load(),
+                    child: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {

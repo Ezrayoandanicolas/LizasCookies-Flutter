@@ -73,6 +73,35 @@ class _POSPageState extends ConsumerState<POSPage> {
       ),
       body: Column(
         children: [
+          if (productsAsync is AsyncLoading)
+            const LinearProgressIndicator(minHeight: 3),
+          if (productsAsync is AsyncLoading)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: theme.colorScheme.primaryContainer,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Mengunduh produk...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Container(
             color: theme.colorScheme.surface,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
