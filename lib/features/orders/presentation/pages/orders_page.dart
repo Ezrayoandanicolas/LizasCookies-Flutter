@@ -142,7 +142,12 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
     load();
   }
 
-  List<OrderData> _getOfflineOrders() {
+  List<OrderData> _getLocalOrders() {
+    final raw = LocalStorage.getAllLocalOrders();
+    return raw.map((e) => OrderData.fromJson(e)).toList();
+  }
+
+  List<OrderData> _getOfflineQueueOrders() {
     final raw = LocalStorage.getAllPendingOrders();
     return raw.where((o) => o['body'] is Map).map((o) {
       final body = Map<String, dynamic>.from(o['body'] as Map);
@@ -154,7 +159,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       }
       return OrderData(
         localId: o['id']?.toString(),
-        status: 'pending_sync',
+        status: (body['status'] as String?) ?? 'pending_sync',
         totalAmount: double.tryParse((body['total'] ?? body['grand_total'] ?? 0).toString()) ?? 0,
         paymentMethod: (body['payment_method'] ?? '-').toString(),
         orderSource: 'POS Offline',
@@ -168,10 +173,14 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   Future<void> load() async {
     _page = 1;
     _hasMore = true;
-    state = const AsyncValue.loading();
 
-    final offlineOrders = _getOfflineOrders();
+    // Always load from local first (instant)
+    final localOrders = _getLocalOrders();
+    final offlineQueue = _getOfflineQueueOrders();
+    final allLocal = [...offlineQueue, ...localOrders];
+    state = AsyncValue.data(allLocal);
 
+    // Background API refresh
     try {
       final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 50};
       final res = await _dio.get('/superadmin/orders', queryParameters: params);
@@ -186,13 +195,20 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       }
       _hasMore = list.length >= 50;
       final onlineOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
-      state = AsyncValue.data([...offlineOrders, ...onlineOrders]);
-    } catch (e, st) {
-      if (offlineOrders.isNotEmpty) {
-        state = AsyncValue.data(offlineOrders);
-      } else {
-        state = AsyncValue.error(e, st);
+
+      // Save to local
+      for (final order in onlineOrders) {
+        if (order.id != null) {
+          await LocalStorage.saveLocalOrder('order_${order.id}', order.toJson());
+        }
       }
+
+      // Merge: offline queue + online (local has latest)
+      final mergedOffline = _getOfflineQueueOrders();
+      final mergedLocal = _getLocalOrders();
+      state = AsyncValue.data([...mergedOffline, ...mergedLocal]);
+    } catch (_) {
+      // Silent fail — use local data
     }
   }
 
@@ -213,31 +229,57 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
         list = [];
       }
       _hasMore = list.length >= 50;
-      final current = state.valueOrNull ?? [];
-      state = AsyncValue.data([
-        ...current,
-        ...list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)),
-      ]);
+      final newOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
+      for (final order in newOrders) {
+        if (order.id != null) {
+          await LocalStorage.saveLocalOrder('order_${order.id}', order.toJson());
+        }
+      }
+      final mergedLocal = _getLocalOrders();
+      state = AsyncValue.data(mergedLocal);
     } catch (_) {}
     _isLoadingMore = false;
   }
 
   Future<void> updateOrderStatus(int orderId, String status) async {
+    // Update local first
+    final localKey = 'order_$orderId';
+    final localData = LocalStorage.getLocalOrder(localKey);
+    if (localData != null) {
+      localData['status'] = status;
+      await LocalStorage.updateLocalOrder(localKey, localData);
+    }
+
+    // Update state immediately
+    final current = state.valueOrNull ?? [];
+    state = AsyncValue.data(current.map((o) {
+      if (o.id == orderId) {
+        return OrderData(
+          id: o.id,
+          localId: o.localId,
+          status: status,
+          totalAmount: o.totalAmount,
+          discountAmount: o.discountAmount,
+          paymentMethod: o.paymentMethod,
+          orderSource: o.orderSource,
+          createdAt: o.createdAt,
+          items: o.items,
+          notes: o.notes,
+          storeName: o.storeName,
+          isOffline: o.isOffline,
+        );
+      }
+      return o;
+    }).toList());
+
+    // Background API update
     try {
       await _dio.put(
         '/superadmin/orders/$orderId/status',
         queryParameters: _tenantQp,
         data: {'status': status},
       );
-      await load();
-    } on DioException catch (e) {
-      String msg = e.message ?? 'Gagal update status';
-      final data = e.response?.data;
-      if (data is Map && data.containsKey('message')) {
-        msg = data['message'].toString();
-      }
-      throw Exception(msg);
-    }
+    } catch (_) {}
   }
 }
 

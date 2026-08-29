@@ -95,6 +95,7 @@ class AppConstants {
   static const String offlineStockBoxName = 'offline_stock';
   static const String offlineOrdersBoxName = 'offline_orders';
   static const String syncHistoryBoxName = 'sync_history';
+  static const String localOrdersBoxName = 'local_orders';
   
   // Pagination
   static const int defaultPageSize = 20;

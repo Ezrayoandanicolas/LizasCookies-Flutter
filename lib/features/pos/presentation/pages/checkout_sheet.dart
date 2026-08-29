@@ -108,8 +108,26 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       bool orderSentOnline = false;
       try {
         final dio = ref.read(dioClientProvider).dio;
-        await dio.post('/cashier/pos/orders', data: body);
+        final res = await dio.post('/cashier/pos/orders', data: body);
         orderSentOnline = true;
+
+        // Save to local orders
+        final resData = res.data;
+        final orderId = resData is Map ? (resData['data']?['id'] ?? resData['id']) : null;
+        if (orderId != null) {
+          final localOrder = {
+            'id': orderId,
+            'status': body['status'] ?? 'processing',
+            'total_amount': _grandTotal,
+            'discount_amount': body['discount_amount'] ?? 0,
+            'payment_method': body['payment_method'],
+            'order_source': body['order_source'],
+            'created_at': DateTime.now().toIso8601String(),
+            'items': items,
+            'notes': body['notes'],
+          };
+          await LocalStorage.saveLocalOrder('order_$orderId', localOrder);
+        }
       } catch (e) {
         debugPrint('API failed, saving offline: $e');
         try {
@@ -124,6 +142,22 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           };
           await LocalStorage.saveOfflineOrder(orderId, orderData);
           ref.read(productsProvider.notifier).decreaseStock(items);
+
+          // Also save to local orders
+          final localOrder = {
+            'id': null,
+            'local_id': orderId,
+            'status': body['status'] ?? 'pending_sync',
+            'total_amount': _grandTotal,
+            'discount_amount': body['discount_amount'] ?? 0,
+            'payment_method': body['payment_method'],
+            'order_source': 'POS Offline',
+            'created_at': DateTime.now().toIso8601String(),
+            'items': items,
+            'notes': body['notes'],
+            'is_offline': true,
+          };
+          await LocalStorage.saveLocalOrder('local_$orderId', localOrder);
         } catch (e2) {
           debugPrint('Offline save also failed: $e2');
           rethrow;

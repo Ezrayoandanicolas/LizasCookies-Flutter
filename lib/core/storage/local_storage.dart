@@ -15,6 +15,7 @@ class LocalStorage {
   static late Box _offlineOrdersBox;
   static late Box _offlineStockBox;
   static late Box _syncHistoryBox;
+  static late Box _localOrdersBox;
 
   static Future<void> init() async {
     final appDocDir = await getApplicationDocumentsDirectory();
@@ -29,6 +30,7 @@ class LocalStorage {
     _offlineOrdersBox = await Hive.openBox(AppConstants.offlineOrdersBoxName);
     _offlineStockBox = await Hive.openBox(AppConstants.offlineStockBoxName);
     _syncHistoryBox = await Hive.openBox(AppConstants.syncHistoryBoxName);
+    _localOrdersBox = await Hive.openBox(AppConstants.localOrdersBoxName);
   }
 
   // Cart
@@ -127,6 +129,35 @@ class LocalStorage {
   }
 
   static Future<void> clearSyncHistory() async => _syncHistoryBox.clear();
+
+  // Local Orders (for full offline mode)
+  static Box get localOrdersBox => _localOrdersBox;
+
+  static Future<void> saveLocalOrder(String key, Map<String, dynamic> order) async =>
+      _localOrdersBox.put(key, order);
+
+  static Map<String, dynamic>? getLocalOrder(String key) =>
+      _localOrdersBox.get(key);
+
+  static List<Map<String, dynamic>> getAllLocalOrders() {
+    return _localOrdersBox.values
+        .where((e) => e is Map)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList()
+      ..sort((a, b) {
+        final ta = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(2000);
+        final tb = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(2000);
+        return tb.compareTo(ta);
+      });
+  }
+
+  static Future<void> updateLocalOrder(String key, Map<String, dynamic> order) async =>
+      _localOrdersBox.put(key, order);
+
+  static Future<void> removeLocalOrder(String key) async =>
+      _localOrdersBox.delete(key);
+
+  static Future<void> clearLocalOrders() async => _localOrdersBox.clear();
 
   // Generic
   static Future<void> put(String boxName, String key, dynamic value) async {

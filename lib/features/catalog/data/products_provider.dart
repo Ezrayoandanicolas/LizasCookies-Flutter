@@ -140,8 +140,6 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
   String? _lastCacheKey;
 
   Future<void> load({String? search}) async {
-    state = const AsyncValue.loading();
-
     final currentKey = _cacheKey;
     if (_lastCacheKey != null && _lastCacheKey != currentKey) {
       await LocalStorage.clearProductsCache();
@@ -149,19 +147,20 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
     }
     _lastCacheKey = currentKey;
 
-    final connectivity = _ref.read(connectivityProvider);
-    if (connectivity == ConnectivityStatus.offline) {
-      final cached = LocalStorage.getCachedProducts(_cacheKey);
-      if (cached != null && cached.isNotEmpty) {
-        try {
-          final list = jsonDecode(cached) as List;
-          state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
-          return;
-        } catch (_) {}
-      }
+    // Always load from cache first (instant)
+    final cached = LocalStorage.getCachedProducts(_cacheKey);
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final list = jsonDecode(cached) as List;
+        state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
+      } catch (_) {}
+    } else if (state is! AsyncData) {
       state = const AsyncValue.data([]);
-      return;
     }
+
+    // Background API refresh
+    final connectivity = _ref.read(connectivityProvider);
+    if (connectivity == ConnectivityStatus.offline) return;
 
     try {
       final params = <String, dynamic>{..._tenantQp, ..._storeQp, 'per_page': 100};
@@ -188,16 +187,8 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
 
       final encoded = jsonEncode(list);
       LocalStorage.cacheProducts(_cacheKey, encoded);
-    } catch (e, st) {
-      final cached = LocalStorage.getCachedProducts(_cacheKey);
-      if (cached != null && cached.isNotEmpty) {
-        try {
-          final list = jsonDecode(cached) as List;
-          state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
-          return;
-        } catch (_) {}
-      }
-      state = AsyncValue.error(e, st);
+    } catch (_) {
+      // Silent fail — use cached data
     }
   }
 }
