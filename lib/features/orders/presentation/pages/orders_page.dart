@@ -1,12 +1,23 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/storage/local_storage.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/domain/entities/auth_entity.dart';
+
+const _wib = Duration(hours: 7);
+String _fmtWIB(DateTime? d) {
+  if (d == null) return '-';
+  final wib = d.toUtc().add(_wib);
+  return DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(wib);
+}
 
 class OrderItem {
   final String name;
@@ -29,10 +40,17 @@ class OrderItem {
       price: double.tryParse((json['price'] ?? 0).toString()) ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'product_name': name,
+    'quantity': quantity,
+    'price': price,
+  };
 }
 
 class OrderData {
-  final int id;
+  final int? id;
+  final String? localId;
   final String status;
   final double totalAmount;
   final double discountAmount;
@@ -42,9 +60,11 @@ class OrderData {
   final List<OrderItem> items;
   final String? notes;
   final String? storeName;
+  final bool isOffline;
 
   const OrderData({
-    required this.id,
+    this.id,
+    this.localId,
     required this.status,
     required this.totalAmount,
     this.discountAmount = 0,
@@ -54,9 +74,10 @@ class OrderData {
     this.items = const [],
     this.notes,
     this.storeName,
+    this.isOffline = false,
   });
 
-  String get orderNumber => '#$id';
+  String get orderNumber => id != null ? '#$id' : '#OFFLINE-${(localId ?? '').substring(0, 8)}';
   double get finalTotal => totalAmount - discountAmount;
 
   String get itemsSummary {
@@ -76,7 +97,8 @@ class OrderData {
     }
 
     return OrderData(
-      id: (json['id'] ?? 0).toInt(),
+      id: json['id'] != null ? (json['id'] is int ? json['id'] as int : int.tryParse(json['id'].toString())) : null,
+      localId: json['local_id']?.toString(),
       status: (json['status'] ?? 'pending').toString().toLowerCase(),
       totalAmount: double.tryParse((json['total_amount'] ?? json['total'] ?? 0).toString()) ?? 0,
       discountAmount: double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
@@ -86,8 +108,24 @@ class OrderData {
       items: itemsList,
       notes: json['notes']?.toString(),
       storeName: json['store'] is Map ? json['store']['name']?.toString() : null,
+      isOffline: json['is_offline'] == true,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'local_id': localId,
+    'status': status,
+    'total_amount': totalAmount,
+    'discount_amount': discountAmount,
+    'payment_method': paymentMethod,
+    'order_source': orderSource,
+    'created_at': createdAt?.toIso8601String(),
+    'items': items.map((e) => e.toJson()).toList(),
+    'notes': notes,
+    'store_name': storeName,
+    'is_offline': isOffline,
+  };
 }
 
 class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
@@ -104,12 +142,38 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
     load();
   }
 
+  List<OrderData> _getOfflineOrders() {
+    final raw = LocalStorage.getAllPendingOrders();
+    return raw.where((o) => o['body'] is Map).map((o) {
+      final body = Map<String, dynamic>.from(o['body'] as Map);
+      final itemsList = <OrderItem>[];
+      if (body['items'] is List) {
+        itemsList.addAll(
+          (body['items'] as List).map((e) => OrderItem.fromJson(e as Map<String, dynamic>)),
+        );
+      }
+      return OrderData(
+        localId: o['id']?.toString(),
+        status: 'pending_sync',
+        totalAmount: double.tryParse((body['total'] ?? body['grand_total'] ?? 0).toString()) ?? 0,
+        paymentMethod: (body['payment_method'] ?? '-').toString(),
+        orderSource: 'POS Offline',
+        createdAt: o['created_at'] != null ? DateTime.tryParse(o['created_at'].toString()) : null,
+        items: itemsList,
+        isOffline: true,
+      );
+    }).toList();
+  }
+
   Future<void> load() async {
     _page = 1;
     _hasMore = true;
     state = const AsyncValue.loading();
+
+    final offlineOrders = _getOfflineOrders();
+
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
+      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 50};
       final res = await _dio.get('/superadmin/orders', queryParameters: params);
       final data = res.data;
       List list;
@@ -120,12 +184,15 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       } else {
         list = [];
       }
-      _hasMore = list.length >= 20;
-      state = AsyncValue.data(
-        list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList(),
-      );
+      _hasMore = list.length >= 50;
+      final onlineOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
+      state = AsyncValue.data([...offlineOrders, ...onlineOrders]);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (offlineOrders.isNotEmpty) {
+        state = AsyncValue.data(offlineOrders);
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
@@ -134,7 +201,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
     _isLoadingMore = true;
     _page++;
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
+      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 50};
       final res = await _dio.get('/superadmin/orders', queryParameters: params);
       final data = res.data;
       List list;
@@ -145,7 +212,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       } else {
         list = [];
       }
-      _hasMore = list.length >= 20;
+      _hasMore = list.length >= 50;
       final current = state.valueOrNull ?? [];
       state = AsyncValue.data([
         ...current,
@@ -153,6 +220,24 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       ]);
     } catch (_) {}
     _isLoadingMore = false;
+  }
+
+  Future<void> updateOrderStatus(int orderId, String status) async {
+    try {
+      await _dio.put(
+        '/superadmin/orders/$orderId/status',
+        queryParameters: _tenantQp,
+        data: {'status': status},
+      );
+      await load();
+    } on DioException catch (e) {
+      String msg = e.message ?? 'Gagal update status';
+      final data = e.response?.data;
+      if (data is Map && data.containsKey('message')) {
+        msg = data['message'].toString();
+      }
+      throw Exception(msg);
+    }
   }
 }
 
@@ -192,12 +277,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   }
 
   String _fmt(double amount) => CurrencyFormatter.idr(amount);
-  String _fmtDate(DateTime? d) => d != null ? DateFormat('dd MMM yyyy, HH:mm').format(d) : '-';
 
   Color _statusColor(String s) {
     switch (s) {
       case 'pending': return Colors.orange;
       case 'paid': return Colors.orange;
+      case 'pending_sync': return Colors.orange;
       case 'processing': return Colors.blue;
       case 'completed': return Colors.green;
       case 'cancelled': return Colors.red;
@@ -209,6 +294,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
     switch (s) {
       case 'pending': return 'Menunggu';
       case 'paid': return 'Dibayar';
+      case 'pending_sync': return 'Menunggu Sync';
       case 'processing': return 'Diproses';
       case 'completed': return 'Selesai';
       case 'cancelled': return 'Dibatalkan';
@@ -222,7 +308,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pesanan Saya'),
+        title: const Text('Pesanan'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -252,7 +338,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
         ),
         data: (orders) {
           final all = orders;
-          final processed = orders.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'processing').toList();
+          final processed = orders.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'pending_sync' || o.status == 'processing').toList();
           final completed = orders.where((o) => o.status == 'completed').toList();
           final cancelled = orders.where((o) => o.status == 'cancelled').toList();
 
@@ -290,7 +376,6 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
                       return _OrderCard(
                         order: list[index],
                         fmt: _fmt,
-                        fmtDate: _fmtDate,
                         statusColor: _statusColor,
                         statusLabel: _statusLabel,
                       );
@@ -309,14 +394,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
 class _OrderCard extends ConsumerWidget {
   final OrderData order;
   final String Function(double) fmt;
-  final String Function(DateTime?) fmtDate;
   final Color Function(String) statusColor;
   final String Function(String) statusLabel;
 
   const _OrderCard({
     required this.order,
     required this.fmt,
-    required this.fmtDate,
     required this.statusColor,
     required this.statusLabel,
   });
@@ -324,6 +407,7 @@ class _OrderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = statusColor(order.status);
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -338,6 +422,10 @@ class _OrderCard extends ConsumerWidget {
                 children: [
                   Text(order.orderNumber,
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  if (order.isOffline) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.cloud_off, size: 14, color: Colors.orange.shade600),
+                  ],
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -351,7 +439,7 @@ class _OrderCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(fmtDate(order.createdAt),
+              Text(_fmtWIB(order.createdAt),
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
               if (order.storeName != null) ...[
                 const SizedBox(height: 2),
@@ -372,7 +460,7 @@ class _OrderCard extends ConsumerWidget {
               Row(
                 children: [
                   Text(fmt(order.finalTotal),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFE85D3A))),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: theme.colorScheme.primary)),
                   const Spacer(),
                   Text(order.paymentMethod.toUpperCase(),
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
@@ -385,82 +473,30 @@ class _OrderCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _approveOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.put(
-        '/superadmin/orders/${order.id}/status',
-        queryParameters: tenantQp,
-        data: {'status': 'processing'},
-      );
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan diproses')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  Future<void> _rejectOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.put(
-        '/superadmin/orders/${order.id}/status',
-        queryParameters: tenantQp,
-        data: {'status': 'cancelled'},
-      );
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan dibatalkan')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  Future<void> _completeOrder(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioClientProvider).dio;
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-    try {
-      await dio.put(
-        '/superadmin/orders/${order.id}/status',
-        queryParameters: tenantQp,
-        data: {'status': 'completed'},
-      );
-      if (context.mounted) Navigator.pop(context);
-      ref.read(ordersProvider.notifier).load();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan selesai')));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-      }
-    }
-  }
-
-  void _showDetail(BuildContext context, WidgetRef ref) {
+  Future<void> _showDetail(BuildContext context, WidgetRef ref) async {
     final theme = Theme.of(context);
-    showDialog(
+    final connectivity = ref.read(connectivityProvider);
+    final isOnline = connectivity == ConnectivityStatus.online;
+
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Pesanan ${order.orderNumber}'),
+        title: Row(
+          children: [
+            Text('Pesanan ${order.orderNumber}'),
+            if (order.isOffline) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.cloud_off, size: 16, color: Colors.orange.shade600),
+            ],
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _row('Status', statusLabel(order.status)),
-              _row('Tanggal', fmtDate(order.createdAt)),
+              _row('Tanggal', _fmtWIB(order.createdAt)),
               _row('Pembayaran', order.paymentMethod.toUpperCase()),
               _row('Sumber', order.orderSource),
               if (order.storeName != null) _row('Toko', order.storeName!),
@@ -486,7 +522,7 @@ class _OrderCard extends ConsumerWidget {
                 children: [
                   const Text('Total', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   Text(fmt(order.finalTotal),
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFFE85D3A))),
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: theme.colorScheme.primary)),
                 ],
               ),
               if (order.notes != null && order.notes!.isNotEmpty) ...[
@@ -497,18 +533,18 @@ class _OrderCard extends ConsumerWidget {
           ),
         ),
         actions: [
-          if (order.status == 'pending') ...[
+          if (order.status == 'pending' || order.status == 'paid') ...[
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Tutup'),
             ),
             FilledButton(
-              onPressed: () => _rejectOrder(ctx, ref),
+              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'cancelled', 'Dibatalkan') : null,
               style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
               child: const Text('Tolak'),
             ),
             FilledButton(
-              onPressed: () => _approveOrder(ctx, ref),
+              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'processing', 'Diproses') : null,
               child: const Text('Proses'),
             ),
           ] else if (order.status == 'processing') ...[
@@ -517,7 +553,7 @@ class _OrderCard extends ConsumerWidget {
               child: const Text('Tutup'),
             ),
             FilledButton(
-              onPressed: () => _completeOrder(ctx, ref),
+              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'completed', 'Selesai') : null,
               child: const Text('Selesai'),
             ),
           ] else ...[
@@ -528,6 +564,21 @@ class _OrderCard extends ConsumerWidget {
     );
   }
 
+  Future<void> _updateStatus(BuildContext context, WidgetRef ref, String status, String label) async {
+    if (order.id == null) return;
+    try {
+      await ref.read(ordersProvider.notifier).updateOrderStatus(order.id!, status);
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan $label')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      }
+    }
+  }
+
   Widget _row(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -535,7 +586,7 @@ class _OrderCard extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );

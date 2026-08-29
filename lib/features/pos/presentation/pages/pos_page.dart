@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../../catalog/data/products_provider.dart';
 import '../../../cart/data/cart_provider.dart';
+import '../../../orders/presentation/pages/orders_page.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import 'checkout_sheet.dart';
 
 class POSPage extends ConsumerStatefulWidget {
@@ -40,6 +43,10 @@ class _POSPageState extends ConsumerState<POSPage> {
         title: const Text('Point of Sale'),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () => _showOrdersSheet(context),
+          ),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -283,6 +290,15 @@ class _POSPageState extends ConsumerState<POSPage> {
       builder: (_) => const CheckoutSheet(),
     );
   }
+
+  void _showOrdersSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _POSOrdersSheet(),
+    );
+  }
 }
 
 class _ProductCard extends ConsumerWidget {
@@ -506,6 +522,146 @@ class _BottomBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+const _wib = Duration(hours: 7);
+String _fmtWIB(DateTime? d) {
+  if (d == null) return '-';
+  final wib = d.toUtc().add(_wib);
+  return DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(wib);
+}
+
+class _POSOrdersSheet extends ConsumerStatefulWidget {
+  const _POSOrdersSheet();
+
+  @override
+  ConsumerState<_POSOrdersSheet> createState() => _POSOrdersSheetState();
+}
+
+class _POSOrdersSheetState extends ConsumerState<_POSOrdersSheet> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(ordersProvider.notifier).load();
+    });
+  }
+
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'pending': return Colors.orange;
+      case 'paid': return Colors.orange;
+      case 'pending_sync': return Colors.orange;
+      case 'processing': return Colors.blue;
+      case 'completed': return Colors.green;
+      case 'cancelled': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String s) {
+    switch (s) {
+      case 'pending': return 'Menunggu';
+      case 'paid': return 'Dibayar';
+      case 'pending_sync': return 'Offline';
+      case 'processing': return 'Diproses';
+      case 'completed': return 'Selesai';
+      case 'cancelled': return 'Dibatalkan';
+      default: return s.toUpperCase();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ordersAsync = ref.watch(ordersProvider);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Pesanan Terbaru'),
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          body: ordersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Gagal memuat: $e')),
+            data: (orders) {
+              if (orders.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long, size: 48, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text('Belum ada pesanan', style: TextStyle(color: Colors.grey.shade500)),
+                    ],
+                  ),
+                );
+              }
+              return ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: orders.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+                itemBuilder: (context, index) {
+                  final order = orders[index];
+                  final color = _statusColor(order.status);
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          order.id != null ? '${order.id}' : '!',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      order.itemsSummary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '${_fmtWIB(order.createdAt)}  •  ${CurrencyFormatter.idr(order.finalTotal)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _statusLabel(order.status),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

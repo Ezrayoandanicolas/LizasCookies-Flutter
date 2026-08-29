@@ -231,7 +231,7 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
       itemBuilder: (context, index) {
         final item = history[index];
-        final timeStr = dateFormat.format(item.timestamp);
+        final timeStr = dateFormat.format(item.timestamp.toUtc().add(const Duration(hours: 7)));
 
         return _SyncHistoryTile(
           item: item,

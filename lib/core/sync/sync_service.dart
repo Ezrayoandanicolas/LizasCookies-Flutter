@@ -90,7 +90,7 @@ class SyncService {
           endpoint: endpoint,
           method: method,
           description: '$desc (max retry tercapai)',
-          timestamp: DateTime.now(),
+          timestamp: DateTime.now().toUtc(),
           retryCount: retryCount,
           requestBody: body,
         ));
@@ -114,7 +114,7 @@ class SyncService {
           method: method,
           description: desc,
           httpStatusCode: response.statusCode,
-          timestamp: DateTime.now(),
+          timestamp: DateTime.now().toUtc(),
           retryCount: retryCount,
           requestBody: body,
         ));
@@ -140,7 +140,7 @@ class SyncService {
           description: desc,
           error: errorMsg,
           httpStatusCode: statusCode,
-          timestamp: DateTime.now(),
+          timestamp: DateTime.now().toUtc(),
           retryCount: retryCount + 1,
           requestBody: body,
         ));
@@ -158,7 +158,7 @@ class SyncService {
           method: method,
           description: desc,
           error: e.toString(),
-          timestamp: DateTime.now(),
+          timestamp: DateTime.now().toUtc(),
           retryCount: retryCount + 1,
           requestBody: body,
         ));
