@@ -573,10 +573,30 @@ class _POSOrdersSheetState extends ConsumerState<_POSOrdersSheet> {
     }
   }
 
+  Future<void> _updateStatus(OrderData order, String status) async {
+    if (order.id == null) return;
+    try {
+      await ref.read(ordersProvider.notifier).updateOrderStatus(order.id!, status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pesanan ${_statusLabel(status)}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ordersAsync = ref.watch(ordersProvider);
+    final connectivity = ref.watch(connectivityProvider);
+    final isOnline = connectivity == ConnectivityStatus.online;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
@@ -589,6 +609,11 @@ class _POSOrdersSheetState extends ConsumerState<_POSOrdersSheet> {
             title: const Text('Pesanan Terbaru'),
             automaticallyImplyLeading: false,
             actions: [
+              if (!isOnline)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(Icons.cloud_off, size: 18, color: Colors.orange.shade600),
+                ),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
@@ -640,21 +665,21 @@ class _POSOrdersSheetState extends ConsumerState<_POSOrdersSheet> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
-                    subtitle: Text(
-                      '${_fmtWIB(order.createdAt)}  •  ${CurrencyFormatter.idr(order.finalTotal)}',
-                      style: const TextStyle(fontSize: 12),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${_fmtWIB(order.createdAt)}  •  ${CurrencyFormatter.idr(order.finalTotal)}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (order.isOffline)
+                          Text(
+                            'Offline — akan disync saat online',
+                            style: TextStyle(fontSize: 11, color: Colors.orange.shade600),
+                          ),
+                      ],
                     ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _statusLabel(order.status),
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                      ),
-                    ),
+                    trailing: _buildActionButton(order, isOnline),
                   );
                 },
               );
@@ -662,6 +687,63 @@ class _POSOrdersSheetState extends ConsumerState<_POSOrdersSheet> {
           ),
         );
       },
+    );
+  }
+
+  Widget? _buildActionButton(OrderData order, bool isOnline) {
+    final theme = Theme.of(context);
+
+    if (order.status == 'pending' || order.status == 'paid') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FilledButton.tonal(
+            onPressed: isOnline ? () => _updateStatus(order, 'cancelled') : null,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              backgroundColor: theme.colorScheme.errorContainer,
+              foregroundColor: theme.colorScheme.error,
+            ),
+            child: const Text('Tolak', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 6),
+          FilledButton(
+            onPressed: isOnline ? () => _updateStatus(order, 'processing') : null,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            child: const Text('Proses', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      );
+    }
+
+    if (order.status == 'processing') {
+      return FilledButton(
+        onPressed: isOnline ? () => _updateStatus(order, 'completed') : null,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        child: const Text('Selesai', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      );
+    }
+
+    final color = _statusColor(order.status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _statusLabel(order.status),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+      ),
     );
   }
 }
