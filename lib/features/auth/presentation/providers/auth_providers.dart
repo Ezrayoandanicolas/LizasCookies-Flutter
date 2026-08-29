@@ -29,7 +29,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 // Auth State Notifier
 class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
-  AuthNotifier(this._ref) : super(const Unauthenticated()) {
+  AuthNotifier(this._ref) : super(const AuthLoading()) {
     _init();
   }
 
@@ -42,6 +42,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
         tokens: AuthTokens(accessToken: token, refreshToken: '', expiresIn: 3600),
       );
+    } else {
+      state = const Unauthenticated();
     }
   }
 

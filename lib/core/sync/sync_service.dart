@@ -47,7 +47,7 @@ class SyncService {
     for (final order in orders) {
       final id = order['id'] as String;
       final endpoint = order['endpoint'] as String;
-      final body = order['body'] as Map<String, dynamic>;
+      final body = Map<String, dynamic>.from(order['body'] as Map);
       final retryCount = (order['retry_count'] as num?)?.toInt() ?? 0;
 
       if (retryCount >= AppConstants.maxRetries) {

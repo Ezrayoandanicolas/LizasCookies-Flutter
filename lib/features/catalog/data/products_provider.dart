@@ -137,22 +137,29 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
     LocalStorage.cacheProducts(_cacheKey, encoded);
   }
 
+  String? _lastCacheKey;
+
   Future<void> load({String? search}) async {
     state = const AsyncValue.loading();
 
-    final cached = LocalStorage.getCachedProducts(_cacheKey);
-    if (cached != null && cached.isNotEmpty) {
-      try {
-        final list = jsonDecode(cached) as List;
-        state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
-      } catch (_) {}
+    final currentKey = _cacheKey;
+    if (_lastCacheKey != null && _lastCacheKey != currentKey) {
+      await LocalStorage.clearProductsCache();
+      await LocalStorage.clearCategoriesCache();
     }
+    _lastCacheKey = currentKey;
 
     final connectivity = _ref.read(connectivityProvider);
     if (connectivity == ConnectivityStatus.offline) {
-      if (state is! AsyncData) {
-        state = const AsyncValue.data([]);
+      final cached = LocalStorage.getCachedProducts(_cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        try {
+          final list = jsonDecode(cached) as List;
+          state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
+          return;
+        } catch (_) {}
       }
+      state = const AsyncValue.data([]);
       return;
     }
 
@@ -182,7 +189,14 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
       final encoded = jsonEncode(list);
       LocalStorage.cacheProducts(_cacheKey, encoded);
     } catch (e, st) {
-      if (state is AsyncData) return;
+      final cached = LocalStorage.getCachedProducts(_cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        try {
+          final list = jsonDecode(cached) as List;
+          state = AsyncValue.data(list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList());
+          return;
+        } catch (_) {}
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -192,16 +206,7 @@ final productsProvider = StateNotifierProvider<ProductsNotifier, AsyncValue<List
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   final storeQp = ref.watch(storeQueryProvider).valueOrNull ?? <String, dynamic>{};
-  final notifier = ProductsNotifier(dio, tenantQp, storeQp, ref);
-  if (!tenantQp.containsKey('tenant_id')) {
-    ref.listen(tenantQueryProvider, (prev, next) {
-      final newTenantQp = next.valueOrNull;
-      if (newTenantQp != null && newTenantQp.containsKey('tenant_id')) {
-        notifier.load();
-      }
-    });
-  }
-  return notifier;
+  return ProductsNotifier(dio, tenantQp, storeQp, ref);
 });
 
 final productsCacheProvider = Provider<List<ProductItem>>((ref) {
