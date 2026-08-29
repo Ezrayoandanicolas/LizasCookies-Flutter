@@ -176,6 +176,10 @@ class SyncService {
       synced: syncedCount,
       failed: failedCount,
     ));
+
+    try {
+      _ref.read(syncHistoryProvider.notifier).refresh();
+    } catch (_) {}
   }
 
   Future<void> _logHistory(SyncHistoryItem item) async {
@@ -278,8 +282,21 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   return service;
 });
 
-final syncHistoryProvider = Provider<List<SyncHistoryItem>>((ref) {
-  ref.watch(syncServiceProvider);
-  final raw = LocalStorage.getAllSyncHistory();
-  return raw.map((e) => SyncHistoryItem.fromJson(e)).toList();
+class SyncHistoryNotifier extends StateNotifier<List<SyncHistoryItem>> {
+  SyncHistoryNotifier() : super(_load());
+
+  static List<SyncHistoryItem> _load() {
+    final raw = LocalStorage.getAllSyncHistory();
+    return raw.map((e) => SyncHistoryItem.fromJson(e)).toList();
+  }
+
+  void refresh() {
+    state = _load();
+  }
+}
+
+final syncHistoryProvider = StateNotifierProvider<SyncHistoryNotifier, List<SyncHistoryItem>>((ref) {
+  final notifier = SyncHistoryNotifier();
+  ref.listen(syncServiceProvider, (_, __) {});
+  return notifier;
 });

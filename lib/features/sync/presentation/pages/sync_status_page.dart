@@ -231,8 +231,7 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
       itemBuilder: (context, index) {
         final item = history[index];
-        final localTime = item.timestamp.toUtc().add(const Duration(hours: 7));
-        final timeStr = dateFormat.format(localTime);
+        final timeStr = dateFormat.format(item.timestamp);
 
         return _SyncHistoryTile(
           item: item,
@@ -254,6 +253,7 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
           TextButton(
             onPressed: () async {
               await LocalStorage.clearSyncHistory();
+              ref.read(syncHistoryProvider.notifier).refresh();
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
