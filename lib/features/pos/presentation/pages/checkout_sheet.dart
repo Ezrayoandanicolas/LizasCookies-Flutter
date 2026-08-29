@@ -21,6 +21,7 @@ class CheckoutSheet extends ConsumerStatefulWidget {
 
 class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   String _paymentMethod = 'Tunai';
+  String _orderStatus = 'processing';
   bool _usePpn = true;
   final _ppnRate = 0.11;
   final _amountController = TextEditingController();
@@ -69,7 +70,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     setState(() {});
   }
 
-  Future<void> _processPayment() async {
+  Future<void> _processPayment({String? overrideStatus}) async {
     if (_processing) return;
 
     final cart = ref.read(cartProvider);
@@ -96,6 +97,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         'items': items,
         'payment_method': _paymentMethod.toLowerCase().replaceAll(' ', '_'),
         'order_source': 'direct',
+        'status': overrideStatus ?? _orderStatus,
         'notes': _notesController.text.isNotEmpty ? _notesController.text : null,
       };
 
@@ -631,34 +633,74 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: canPay ? _processPayment : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  disabledBackgroundColor: Colors.grey[300],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: canPay && !_processing
+                          ? () => _processPayment(overrideStatus: 'processing')
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey[300],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _processing
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Bayar & Proses',
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700),
+                            ),
+                    ),
                   ),
                 ),
-                child: _processing
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Theme.of(context).colorScheme.onPrimary,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: canPay && !_processing
+                          ? () => _processPayment(overrideStatus: 'completed')
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        disabledBackgroundColor: Colors.grey[300],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      )
-                    : const Text(
-                        'Bayar Sekarang',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-              ),
+                      child: _processing
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            )
+                          : const Text(
+                              'Bayar & Selesai',
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
