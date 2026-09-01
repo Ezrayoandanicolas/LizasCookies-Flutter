@@ -296,14 +296,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
 
 final ordersProvider = StateNotifierProvider<OrdersNotifier, AsyncValue<List<OrderData>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
-  final tenantAsync = ref.watch(tenantQueryProvider);
-  final tenantQp = tenantAsync.valueOrNull ?? <String, dynamic>{};
-  final notifier = OrdersNotifier(dio);
-  // Trigger fetch when tenant resolves
-  if (tenantAsync.hasValue && tenantQp.isNotEmpty) {
-    notifier.loadFromApi(tenantQp);
-  }
-  return notifier;
+  return OrdersNotifier(dio);
 });
 
 class OrdersPage extends ConsumerStatefulWidget {
@@ -314,6 +307,7 @@ class OrdersPage extends ConsumerStatefulWidget {
 
 class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _apiLoaded = false;
 
   @override
   void initState() {
@@ -364,6 +358,18 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final ordersAsync = ref.watch(ordersProvider);
+    final tenantAsync = ref.watch(tenantQueryProvider);
+
+    // When tenant resolves for first time, trigger API load
+    if (tenantAsync.hasValue && !_apiLoaded) {
+      _apiLoaded = true;
+      final tenantQp = tenantAsync.value!;
+      if (tenantQp.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(ordersProvider.notifier).loadFromApi(tenantQp);
+        });
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
