@@ -130,23 +130,22 @@ class OrderData {
 
 class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   final Dio _dio;
-  final Map<String, dynamic> _tenantQp;
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  Map<String, dynamic> _tenantQp = {};
 
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
-  OrdersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.data([])) {
-    // Always show local data first, then fetch API
+  OrdersNotifier(this._dio) : super(const AsyncValue.data([])) {
+    _loadLocal();
+  }
+
+  void _loadLocal() {
     final localOrders = _getLocalOrders();
     final offlineQueue = _getOfflineQueueOrders();
     state = AsyncValue.data([...offlineQueue, ...localOrders]);
-
-    if (_tenantQp.isNotEmpty) {
-      _fetchOnline();
-    }
   }
 
   List<OrderData> _getLocalOrders() {
@@ -180,9 +179,17 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   Future<void> load() async {
     _page = 1;
     _hasMore = true;
-    final localOrders = _getLocalOrders();
-    final offlineQueue = _getOfflineQueueOrders();
-    state = AsyncValue.data([...offlineQueue, ...localOrders]);
+    _loadLocal();
+    if (_tenantQp.isNotEmpty) {
+      await _fetchOnline();
+    }
+  }
+
+  Future<void> loadFromApi(Map<String, dynamic> tenantQp) async {
+    _tenantQp = tenantQp;
+    _page = 1;
+    _hasMore = true;
+    _loadLocal();
     if (_tenantQp.isNotEmpty) {
       await _fetchOnline();
     }
@@ -291,7 +298,12 @@ final ordersProvider = StateNotifierProvider<OrdersNotifier, AsyncValue<List<Ord
   final dio = ref.watch(dioClientProvider).dio;
   final tenantAsync = ref.watch(tenantQueryProvider);
   final tenantQp = tenantAsync.valueOrNull ?? <String, dynamic>{};
-  return OrdersNotifier(dio, tenantQp);
+  final notifier = OrdersNotifier(dio);
+  // Trigger fetch when tenant resolves
+  if (tenantAsync.hasValue && tenantQp.isNotEmpty) {
+    notifier.loadFromApi(tenantQp);
+  }
+  return notifier;
 });
 
 class OrdersPage extends ConsumerStatefulWidget {
