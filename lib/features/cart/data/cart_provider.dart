@@ -77,12 +77,25 @@ class CartState {
     );
   }
 
-  String toJson() => jsonEncode(items.map((i) => i.toJson()).toList());
+  String toJson() => jsonEncode({
+    'items': items.map((i) => i.toJson()).toList(),
+    'store_id': storeId,
+    'tenant_id': tenantId,
+  });
 
   factory CartState.fromJson(String jsonString) {
-    final list = jsonDecode(jsonString) as List;
+    final decoded = jsonDecode(jsonString);
+    if (decoded is List) {
+      // Legacy format: just items array
+      return CartState(
+        items: decoded.map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList(),
+      );
+    }
+    final map = decoded as Map<String, dynamic>;
     return CartState(
-      items: list.map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList(),
+      items: (map['items'] as List? ?? []).map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList(),
+      storeId: map['store_id'] as int?,
+      tenantId: map['tenant_id'] as int?,
     );
   }
 }
@@ -143,8 +156,9 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  void setStore(int storeId) {
-    state = state.copyWith(storeId: storeId);
+  void setStore(int storeId, {int? tenantId}) {
+    state = state.copyWith(storeId: storeId, tenantId: tenantId);
+    _saveToStorage();
   }
 
   void clear() {

@@ -92,7 +92,7 @@ class OrderData {
     final itemsList = <OrderItem>[];
     if (json['items'] is List) {
       itemsList.addAll(
-        (json['items'] as List).map((e) => OrderItem.fromJson(e as Map<String, dynamic>)),
+        (json['items'] as List).map((e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
       );
     }
 
@@ -150,7 +150,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
 
   List<OrderData> _getLocalOrders() {
     final raw = LocalStorage.getAllLocalOrders();
-    return raw.map((e) => OrderData.fromJson(e)).toList();
+    return raw.map((e) => OrderData.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
   List<OrderData> _getOfflineQueueOrders() {
@@ -160,7 +160,7 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       final itemsList = <OrderItem>[];
       if (body['items'] is List) {
         itemsList.addAll(
-          (body['items'] as List).map((e) => OrderItem.fromJson(e as Map<String, dynamic>)),
+          (body['items'] as List).map((e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
         );
       }
       return OrderData(
@@ -308,6 +308,7 @@ class OrdersPage extends ConsumerStatefulWidget {
 class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _apiLoaded = false;
+  String _dateFilter = 'all'; // all, today, 7d, 30d, 3m
 
   @override
   void initState() {
@@ -319,6 +320,50 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  List<OrderData> _filterByDate(List<OrderData> orders) {
+    if (_dateFilter == 'all') return orders;
+    final now = DateTime.now();
+    DateTime cutoff;
+    switch (_dateFilter) {
+      case 'today':
+        cutoff = DateTime(now.year, now.month, now.day);
+        break;
+      case '7d':
+        cutoff = now.subtract(const Duration(days: 7));
+        break;
+      case '30d':
+        cutoff = now.subtract(const Duration(days: 30));
+        break;
+      case '3m':
+        cutoff = DateTime(now.year, now.month - 3, now.day);
+        break;
+      default:
+        return orders;
+    }
+    return orders.where((o) {
+      if (o.createdAt == null) return false;
+      return o.createdAt!.isAfter(cutoff);
+    }).toList();
+  }
+
+  Widget _buildDateFilterChip(String label, String value) {
+    final selected = _dateFilter == value;
+    return FilterChip(
+      label: Text(label, style: TextStyle(
+        fontSize: 12,
+        color: selected ? Colors.white : Colors.grey.shade700,
+        fontWeight: FontWeight.w500,
+      )),
+      selected: selected,
+      onSelected: (_) => setState(() => _dateFilter = value),
+      selectedColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Colors.grey.shade100,
+      checkmarkColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
   }
 
   bool _onScrollNotification(ScrollNotification notification) {
@@ -402,14 +447,33 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
           ),
         ),
         data: (orders) {
-          final all = orders;
-          final processed = orders.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'pending_sync' || o.status == 'processing').toList();
-          final completed = orders.where((o) => o.status == 'completed').toList();
-          final cancelled = orders.where((o) => o.status == 'cancelled').toList();
+          final filtered = _filterByDate(orders);
+          final processed = filtered.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'pending_sync' || o.status == 'processing').toList();
+          final completed = filtered.where((o) => o.status == 'completed').toList();
+          final cancelled = filtered.where((o) => o.status == 'cancelled').toList();
 
-          final lists = [all, processed, completed, cancelled];
+          final lists = [filtered, processed, completed, cancelled];
 
-          return TabBarView(
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    _buildDateFilterChip('Semua', 'all'),
+                    const SizedBox(width: 6),
+                    _buildDateFilterChip('Hari Ini', 'today'),
+                    const SizedBox(width: 6),
+                    _buildDateFilterChip('7 Hari', '7d'),
+                    const SizedBox(width: 6),
+                    _buildDateFilterChip('30 Hari', '30d'),
+                    const SizedBox(width: 6),
+                    _buildDateFilterChip('3 Bulan', '3m'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
             controller: _tabController,
             children: lists.map((list) {
               if (list.isEmpty) {
@@ -449,6 +513,9 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
                 ),
               );
             }).toList(),
+          ),
+              ),
+            ],
           );
         },
       ),
