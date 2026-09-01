@@ -89,6 +89,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       final items = cart.items
           .map((item) => <String, dynamic>{
                 'product_id': item.productId,
+                'product_name': item.name,
+                'name': item.name,
+                'price': item.price,
                 'quantity': item.quantity,
               })
           .toList();
@@ -113,11 +116,11 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
         // Save to local orders
         final resData = res.data;
-        final orderId = resData is Map ? (resData['data']?['id'] ?? resData['id']) : null;
+        final orderId = resData is Map ? (resData['data']?['id'] ?? resData['order_id']) : null;
         if (orderId != null) {
           final localOrder = {
             'id': orderId,
-            'status': body['status'] ?? 'processing',
+            'status': body['status'] ?? 'delivered',
             'total_amount': _grandTotal,
             'discount_amount': body['discount_amount'] ?? 0,
             'payment_method': body['payment_method'],
