@@ -138,8 +138,15 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
-  OrdersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
-    load();
+  OrdersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.data([])) {
+    // Always show local data first, then fetch API
+    final localOrders = _getLocalOrders();
+    final offlineQueue = _getOfflineQueueOrders();
+    state = AsyncValue.data([...offlineQueue, ...localOrders]);
+
+    if (_tenantQp.isNotEmpty) {
+      _fetchOnline();
+    }
   }
 
   List<OrderData> _getLocalOrders() {
@@ -173,14 +180,15 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   Future<void> load() async {
     _page = 1;
     _hasMore = true;
-
-    // Always load from local first (instant)
     final localOrders = _getLocalOrders();
     final offlineQueue = _getOfflineQueueOrders();
-    final allLocal = [...offlineQueue, ...localOrders];
-    state = AsyncValue.data(allLocal);
+    state = AsyncValue.data([...offlineQueue, ...localOrders]);
+    if (_tenantQp.isNotEmpty) {
+      await _fetchOnline();
+    }
+  }
 
-    // Background API refresh
+  Future<void> _fetchOnline() async {
     try {
       final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 50};
       final res = await _dio.get('/superadmin/orders', queryParameters: params);
@@ -196,20 +204,16 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       _hasMore = list.length >= 50;
       final onlineOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
 
-      // Save to local
       for (final order in onlineOrders) {
         if (order.id != null) {
           await LocalStorage.saveLocalOrder('order_${order.id}', order.toJson());
         }
       }
 
-      // Merge: offline queue + online (local has latest)
       final mergedOffline = _getOfflineQueueOrders();
       final mergedLocal = _getLocalOrders();
       state = AsyncValue.data([...mergedOffline, ...mergedLocal]);
-    } catch (_) {
-      // Silent fail — use local data
-    }
+    } catch (_) {}
   }
 
   Future<void> loadMore() async {
@@ -285,7 +289,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
 
 final ordersProvider = StateNotifierProvider<OrdersNotifier, AsyncValue<List<OrderData>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
-  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  final tenantAsync = ref.watch(tenantQueryProvider);
+  final tenantQp = tenantAsync.valueOrNull ?? <String, dynamic>{};
   return OrdersNotifier(dio, tenantQp);
 });
 
