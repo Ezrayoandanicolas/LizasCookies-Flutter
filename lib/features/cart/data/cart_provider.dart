@@ -118,17 +118,17 @@ class CartNotifier extends StateNotifier<CartState> {
     LocalStorage.saveCart(state.toJson());
   }
 
-  void addItem(int productId, String name, double price, {String? image, String? unit, String? variant, double? discountPrice, int maxStock = 99}) {
+  void addItem(int productId, String name, double price, {String? image, String? unit, String? variant, double? discountPrice, int maxStock = 99, int quantity = 1}) {
     final existing = state.items.where((i) => i.productId == productId && i.variant == variant).toList();
     if (existing.isNotEmpty) {
       final updated = List<CartItem>.from(state.items);
       final idx = updated.indexWhere((i) => i.productId == productId && i.variant == variant);
-      updated[idx].quantity += 1;
+      updated[idx].quantity += quantity;
       state = state.copyWith(items: updated);
     } else {
       state = state.copyWith(
         items: [...state.items, CartItem(
-          productId: productId, name: name, price: price, image: image, unit: unit, variant: variant, discountPrice: discountPrice, maxStock: maxStock,
+          productId: productId, name: name, price: price, image: image, unit: unit, variant: variant, discountPrice: discountPrice, maxStock: maxStock, quantity: quantity,
         )],
       );
     }

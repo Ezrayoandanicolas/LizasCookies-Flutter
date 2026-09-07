@@ -357,14 +357,7 @@ class _ProductCard extends ConsumerWidget {
                     width: double.infinity,
                     height: 26,
                     child: FilledButton.tonal(
-                      onPressed: () {
-                        ref.read(cartProvider.notifier).addItem(
-                              product.id,
-                              product.name,
-                              product.price,
-                              image: product.image,
-                            );
-                      },
+                      onPressed: () => _showAddQtyDialog(context, ref),
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
@@ -377,6 +370,106 @@ class _ProductCard extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAddQtyDialog(BuildContext context, WidgetRef ref) {
+    final qtyCtrl = TextEditingController(text: '1');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
+            Text(CurrencyFormatter.idr(product.price), style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: qtyCtrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                labelText: 'Jumlah',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _QuickQtyBtn(label: '5', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '10', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '25', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '50', ctrl: qtyCtrl),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  final qty = int.tryParse(qtyCtrl.text) ?? 1;
+                  if (qty <= 0) return;
+                  ref.read(cartProvider.notifier).addItem(
+                        product.id,
+                        product.name,
+                        product.price,
+                        quantity: qty,
+                        image: product.image,
+                      );
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Tambah ke Keranjang'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickQtyBtn extends StatelessWidget {
+  final String label;
+  final TextEditingController ctrl;
+  const _QuickQtyBtn({required this.label, required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: SizedBox(
+        height: 36,
+        child: OutlinedButton(
+          onPressed: () => ctrl.text = label,
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
+        ),
       ),
     );
   }
