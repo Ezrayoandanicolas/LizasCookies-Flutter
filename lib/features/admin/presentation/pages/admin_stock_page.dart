@@ -10,7 +10,7 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
 import '../../../../core/utils/image_helper.dart';
-import '../../../admin/presentation/pages/admin_product_page.dart';
+import 'admin_product_page.dart';
 
 class StockPage extends ConsumerStatefulWidget {
   const StockPage({super.key});
@@ -190,14 +190,19 @@ class _StockPageState extends ConsumerState<StockPage> {
                 if (filtered.isEmpty) {
                   return const Center(child: Text('Tidak ada produk'));
                 }
-                return ListView.separated(
+                return GridView.builder(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 0.65,
+                  ),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final p = filtered[index];
-                    return _StockProductCard(product: p);
+                    return _StockProductGridCard(product: p);
                   },
                 );
               },
@@ -209,18 +214,17 @@ class _StockPageState extends ConsumerState<StockPage> {
   }
 }
 
-class _StockProductCard extends ConsumerWidget {
+class _StockProductGridCard extends ConsumerWidget {
   final Map product;
-  const _StockProductCard({required this.product});
+  const _StockProductGridCard({required this.product});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final thumbnail = ImageHelper.resolve(product['thumbnail']?.toString());
     final name = product['name'] ?? '-';
-    final sku = product['sku'] ?? '-';
     final selectedStore = ref.watch(selectedAdminStoreProvider);
+    final theme = Theme.of(context);
 
-    // Get stock - API returns store_stock as decimal string like "80.00"
     int stockQty = 0;
     if (product['store_stock'] != null) {
       stockQty = double.tryParse(product['store_stock'].toString())?.round() ?? 0;
@@ -237,97 +241,60 @@ class _StockProductCard extends ConsumerWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(8),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: thumbnail != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: thumbnail,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Icon(Icons.cookie, size: 26, color: Theme.of(context).colorScheme.primary),
-        ),
-        title: Text(name,
-            style:
-                const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-        subtitle: Text('SKU: $sku', style: const TextStyle(fontSize: 12)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _showStockDialog(context, ref),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: stockQty > 0
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Stok: $stockQty',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: stockQty > 0
-                      ? Colors.green.shade700
-                      : Colors.red.shade700,
-                ),
+            Expanded(
+              flex: 3,
+              child: Container(
+                color: Colors.grey.shade100,
+                child: thumbnail != null
+                    ? CachedNetworkImage(
+                        imageUrl: thumbnail,
+                        fit: BoxFit.cover,
+                      )
+                    : Icon(Icons.cookie, size: 40, color: theme.colorScheme.primary),
               ),
             ),
-            const SizedBox(width: 8),
-            PopupMenuButton(
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'add',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_circle, color: Colors.green, size: 20),
-                      SizedBox(width: 8),
-                      Text('Tambah Stok'),
-                    ],
-                  ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    const Spacer(),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: stockQty > 0
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Stok: $stockQty',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: stockQty > 0
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Row(
-                    children: [
-                      Icon(Icons.remove_circle,
-                          color: Colors.orange, size: 20),
-                      SizedBox(width: 8),
-                      Text('Kurangi Stok'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'sync',
-                  child: Row(
-                    children: [
-                      Icon(Icons.sync, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Text('Sync ke Semua Toko'),
-                    ],
-                  ),
-                ),
-              ],
-              onSelected: (v) {
-                if (v == 'sync') {
-                  _syncToAllStores(context, ref);
-                } else {
-                  _showStockDialog(context, ref, v.toString());
-                }
-              },
+              ),
             ),
           ],
         ),
@@ -335,73 +302,24 @@ class _StockProductCard extends ConsumerWidget {
     );
   }
 
-  void _syncToAllStores(BuildContext context, WidgetRef ref) async {
-    final productId = product['id'];
-    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  void _showStockDialog(BuildContext context, WidgetRef ref) {
+    final name = product['name'] ?? '-';
+    final sku = product['sku'] ?? '-';
+    final selectedStore = ref.watch(selectedAdminStoreProvider);
 
-    try {
-      final dio = ref.read(dioClientProvider).dio;
-      await dio.post(
-        '/superadmin/products/$productId/sync-all-stores',
-        data: tenantQp,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Berhasil disync ke semua toko'),
-            backgroundColor: Colors.green,
-          ),
-        );
+    int stockQty = 0;
+    if (product['store_stock'] != null) {
+      stockQty = double.tryParse(product['store_stock'].toString())?.round() ?? 0;
+    } else if (product['stores'] is List && selectedStore != null) {
+      for (final s in product['stores']) {
+        if (s is Map && s['id'] == selectedStore.id) {
+          final pivot = s['pivot'];
+          if (pivot is Map) {
+            stockQty = int.tryParse(pivot['stock_quantity'].toString()) ?? 0;
+          }
+          break;
+        }
       }
-    } catch (e) {
-      String msg = 'Gagal sync';
-      if (e is DioException && e.response?.data != null) {
-        final resp = e.response!.data;
-        msg = resp['message'] ?? resp['error'] ?? msg;
-      }
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  void _showStockDialog(BuildContext context, WidgetRef ref, String action) {
-    final qtyCtrl = TextEditingController();
-    final costCtrl = TextEditingController();
-    final reasonCtrl = TextEditingController();
-    final productId = product['id'];
-    final selectedStore = ref.read(selectedAdminStoreProvider);
-    final theme = Theme.of(context);
-
-    if (selectedStore == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pilih toko terlebih dahulu!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    String title;
-    String buttonText;
-    Color buttonColor;
-    IconData icon;
-
-    switch (action) {
-      case 'add':
-        title = 'Tambah Stok';
-        buttonText = 'Tambah';
-        buttonColor = Colors.green;
-        icon = Icons.add_circle;
-        break;
-      default:
-        title = 'Kurangi Stok';
-        buttonText = 'Kurangi';
-        buttonColor = Colors.orange;
-        icon = Icons.remove_circle;
     }
 
     showModalBottomSheet(
@@ -410,191 +328,204 @@ class _StockProductCard extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: buttonColor, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text('${product['name']} - ${selectedStore.name}',
-                style: const TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: qtyCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Jumlah',
-                hintText: 'Masukkan jumlah stok',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.colorScheme.primary),
-                ),
-              ),
-            ),
-            if (action == 'add') ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: costCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Biaya per unit (opsional)',
-                  hintText: 'Masukkan biaya',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: theme.colorScheme.primary),
-                  ),
-                ),
-              ),
-            ],
-            if (action == 'remove') ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: reasonCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Alasan (opsional)',
-                  hintText: 'Contoh: Rusak, Kadaluarsa',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: theme.colorScheme.primary),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final qty = double.tryParse(qtyCtrl.text);
-                  if (qty == null || qty <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Masukkan jumlah yang valid'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-
-                  Navigator.pop(ctx);
-
-                  final connectivity = ref.read(connectivityProvider);
-                  if (connectivity == ConnectivityStatus.offline) {
-                    final box = Hive.box(AppConstants.offlineStockBoxName);
-                    await box.add({
-                      'type': action,
-                      'product_id': product['id'],
-                      'store_id': selectedStore.id,
-                      'quantity': qty,
-                      if (action == 'add' && double.tryParse(costCtrl.text) != null)
-                        'cost': double.parse(costCtrl.text),
-                      if (action == 'remove' && reasonCtrl.text.isNotEmpty)
-                        'reason': reasonCtrl.text,
-                      'timestamp': DateTime.now().toIso8601String(),
-                    });
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Stock tersimpan offline, akan disync saat online'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
-                  final dio = ref.read(dioClientProvider).dio;
-                  final tenantQp =
-                      ref.read(tenantQueryProvider).valueOrNull ??
-                          <String, dynamic>{};
-
-                  try {
-                    final data = <String, dynamic>{
-                      'quantity': qty,
-                      'store_id': selectedStore.id,
-                      ...tenantQp,
-                    };
-
-                    if (action == 'add') {
-                      final cost = double.tryParse(costCtrl.text);
-                      if (cost != null && cost > 0) data['cost'] = cost;
-                      await dio.post(
-                        '/superadmin/products/$productId/add-stock',
-                        data: data,
-                      );
-                    } else {
-                      if (reasonCtrl.text.isNotEmpty) {
-                        data['reason'] = reasonCtrl.text;
-                      }
-                      await dio.post(
-                        '/superadmin/products/$productId/remove-stock',
-                        data: data,
-                      );
-                    }
-
-                    ref.read(adminProductsProvider.notifier).load();
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('$title berhasil!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    String msg = 'Gagal';
-                    if (e is DioException && e.response?.data != null) {
-                      final resp = e.response!.data;
-                      msg = resp['message'] ?? resp['error'] ?? msg;
-                    }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(msg),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonColor,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Text(buttonText),
-              ),
-            ),
-          ],
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (ctx, scrollCtrl) => _StockEditSheet(
+          product: product,
+          currentStock: stockQty,
+          storeName: selectedStore?.name ?? '-',
         ),
       ),
     );
   }
 }
+
+class _StockEditSheet extends ConsumerStatefulWidget {
+  final Map product;
+  final int currentStock;
+  final String storeName;
+
+  const _StockEditSheet({
+    required this.product,
+    required this.currentStock,
+    required this.storeName,
+  });
+
+  @override
+  ConsumerState<_StockEditSheet> createState() => _StockEditSheetState();
+}
+
+class _StockEditSheetState extends ConsumerState<_StockEditSheet> {
+  late TextEditingController _qtyCtrl;
+  String _action = 'add';
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyCtrl = TextEditingController(text: '1');
+  }
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(widget.product['name'] ?? '-',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text('SKU: ${widget.product['sku'] ?? '-'} | Toko: ${widget.storeName}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: widget.currentStock > 0
+                  ? Colors.green.withValues(alpha: 0.08)
+                  : Colors.red.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.inventory_2, size: 20),
+                const SizedBox(width: 8),
+                Text('Stok saat ini: ${widget.currentStock}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'add', label: Text('Tambah'), icon: Icon(Icons.add, size: 16)),
+              ButtonSegment(value: 'remove', label: Text('Kurangi'), icon: Icon(Icons.remove, size: 16)),
+              ButtonSegment(value: 'set', label: Text('Atur'), icon: Icon(Icons.edit, size: 16)),
+            ],
+            selected: {_action},
+            onSelectionChanged: (v) => setState(() => _action = v.first),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _qtyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Jumlah',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _save(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save(BuildContext context) async {
+    final qty = int.tryParse(_qtyCtrl.text) ?? 0;
+    if (qty <= 0) return;
+
+    final productId = widget.product['id'];
+    final selectedStore = ref.read(selectedAdminStoreProvider);
+    if (selectedStore == null) return;
+
+    try {
+      final dio = ref.read(dioClientProvider).dio;
+      final storeStocks = widget.product['store_stock'];
+      int currentPivotStock = 0;
+      final stores = widget.product['stores'];
+      if (stores is List) {
+        for (final s in stores) {
+          if (s is Map && s['id'] == selectedStore.id) {
+            currentPivotStock = int.tryParse((s['pivot']?['stock_quantity'] ?? '0').toString()) ?? 0;
+            break;
+          }
+        }
+      }
+
+      int newStock;
+      switch (_action) {
+        case 'add':
+          newStock = currentPivotStock + qty;
+          break;
+        case 'remove':
+          newStock = (currentPivotStock - qty).clamp(0, 999999);
+          break;
+        case 'set':
+          newStock = qty;
+          break;
+        default:
+          newStock = currentPivotStock;
+      }
+
+      final connectivity = ref.read(connectivityProvider);
+      if (connectivity == ConnectivityStatus.online) {
+        await dio.post('/superadmin/products/$productId/sync-stock', data: {
+          'store_id': selectedStore.id,
+          'stock_quantity': newStock,
+        });
+      } else {
+        final box = Hive.box('offline_stock');
+        await box.put('stock_$productId', {
+          'product_id': productId,
+          'store_id': selectedStore.id,
+          'stock_quantity': newStock,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      // Update local product data
+      if (mounted) {
+        widget.product['store_stock'] = newStock;
+        ref.read(adminProductsProvider.notifier).load();
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_action == 'add'
+                ? 'Stok ditambah $qty'
+                : _action == 'remove'
+                    ? 'Stok dikurangi $qty'
+                    : 'Stok diatur ke $qty'),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+}
+
