@@ -197,7 +197,7 @@ class _StockPageState extends ConsumerState<StockPage> {
                     crossAxisCount: 3,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 0.65,
+                    childAspectRatio: 0.8,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
