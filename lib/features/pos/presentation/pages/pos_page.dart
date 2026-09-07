@@ -457,12 +457,33 @@ class _POSInlineCart extends ConsumerWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final item = cart.items[index];
-                    return ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      title: Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(CurrencyFormatter.idr(item.price), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
-                      trailing: _InlineQtyBtn(productId: item.productId, qty: item.quantity),
+                    return Dismissible(
+                      key: ValueKey('cart_${item.productId}'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 16),
+                        color: Colors.red,
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (_) => ref.read(cartProvider.notifier).removeItem(item.productId),
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        title: Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(CurrencyFormatter.idr(item.price), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _InlineQtyBtn(productId: item.productId, qty: item.quantity),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => ref.read(cartProvider.notifier).removeItem(item.productId),
+                              child: Icon(Icons.close, size: 16, color: Colors.red.shade400),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),
