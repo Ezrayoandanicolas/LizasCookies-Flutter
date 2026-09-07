@@ -556,7 +556,6 @@ class _ProductCard extends ConsumerWidget {
     final inCart = cart.items.where((i) => i.productId == product.id).toList();
     final qtyInCart = inCart.isNotEmpty ? inCart.first.quantity : 0;
     final stock = product.stock;
-    final stockIsLow = stock <= 5;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -605,59 +604,42 @@ class _ProductCard extends ConsumerWidget {
           const Spacer(),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-            child: stockIsLow
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 24,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showAddStockDialog(context, ref),
-                          icon: const Icon(Icons.add_circle_outline, size: 12),
-                          label: const Text('Tambah Stok', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            side: BorderSide(color: Colors.orange.shade700),
-                            foregroundColor: Colors.orange.shade700,
-                          ),
-                        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (qtyInCart > 0)
+                  _QtyControls(productId: product.id, qty: qtyInCart)
+                else if (stock > 0)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 24,
+                    child: FilledButton.tonal(
+                      onPressed: () => _showAddQtyDialog(context, ref),
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       ),
-                      if (qtyInCart > 0) ...[
-                        const SizedBox(height: 4),
-                        _QtyControls(productId: product.id, qty: qtyInCart),
-                      ] else if (stock > 0) ...[
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 24,
-                          child: FilledButton.tonal(
-                            onPressed: () => _showAddQtyDialog(context, ref),
-                            style: FilledButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            ),
-                            child: const Text('Tambah', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ],
-                    ],
-                  )
-                : qtyInCart > 0
-                    ? _QtyControls(productId: product.id, qty: qtyInCart)
-                    : SizedBox(
-                        width: double.infinity,
-                        height: 26,
-                        child: FilledButton.tonal(
-                          onPressed: () => _showAddQtyDialog(context, ref),
-                          style: FilledButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          ),
-                          child: const Text('Tambah', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                        ),
-                      ),
+                      child: const Text('Tambah', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  height: 24,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddStockDialog(context, ref),
+                    icon: const Icon(Icons.add_circle_outline, size: 12),
+                    label: const Text('Stok', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      side: BorderSide(color: Colors.orange.shade700),
+                      foregroundColor: Colors.orange.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
