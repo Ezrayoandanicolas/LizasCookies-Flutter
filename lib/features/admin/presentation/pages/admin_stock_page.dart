@@ -21,6 +21,7 @@ class StockPage extends ConsumerStatefulWidget {
 
 class _StockPageState extends ConsumerState<StockPage> {
   final _searchCtrl = TextEditingController();
+  int? _selectedCategoryId;
 
   @override
   void dispose() {
@@ -32,6 +33,7 @@ class _StockPageState extends ConsumerState<StockPage> {
   Widget build(BuildContext context) {
     final products = ref.watch(adminProductsProvider);
     final selectedStore = ref.watch(selectedAdminStoreProvider);
+    final categories = ref.watch(adminCategoryListProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -40,7 +42,6 @@ class _StockPageState extends ConsumerState<StockPage> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
-          // Store selector
           PopupMenuButton<StoreData?>(
             icon: Row(
               mainAxisSize: MainAxisSize.min,
@@ -71,7 +72,7 @@ class _StockPageState extends ConsumerState<StockPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
@@ -82,7 +83,7 @@ class _StockPageState extends ConsumerState<StockPage> {
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
-                          ref.read(adminProductsProvider.notifier).load();
+                          ref.read(adminProductsProvider.notifier).load(search: '');
                           setState(() {});
                         },
                       )
@@ -96,10 +97,63 @@ class _StockPageState extends ConsumerState<StockPage> {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (v) =>
-                  ref.read(adminProductsProvider.notifier).load(search: v.trim()),
+              onChanged: (v) {
+                setState(() {});
+                ref.read(adminProductsProvider.notifier).load(search: v.trim());
+              },
             ),
+          ),
+          categories.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (cats) {
+              if (cats.isEmpty) return const SizedBox.shrink();
+              return Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text('Semua', style: TextStyle(
+                          fontSize: 12,
+                          color: _selectedCategoryId == null ? Colors.white : Colors.grey.shade700,
+                        )),
+                        selected: _selectedCategoryId == null,
+                        onSelected: (_) => setState(() {
+                          _selectedCategoryId = null;
+                          ref.read(adminProductsProvider.notifier).load(categoryId: null);
+                        }),
+                        selectedColor: theme.colorScheme.primary,
+                        backgroundColor: Colors.grey.shade100,
+                        checkmarkColor: Colors.white,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    ...cats.map((cat) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(cat['name'] ?? '-', style: TextStyle(
+                          fontSize: 12,
+                          color: _selectedCategoryId == cat['id'] ? Colors.white : Colors.grey.shade700,
+                        )),
+                        selected: _selectedCategoryId == cat['id'],
+                        onSelected: (_) => setState(() {
+                          _selectedCategoryId = cat['id'];
+                          ref.read(adminProductsProvider.notifier).load(categoryId: cat['id']);
+                        }),
+                        selectedColor: theme.colorScheme.primary,
+                        backgroundColor: Colors.grey.shade100,
+                        checkmarkColor: Colors.white,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    )),
+                  ],
+                ),
+              );
+            },
           ),
           Expanded(
             child: products.when(

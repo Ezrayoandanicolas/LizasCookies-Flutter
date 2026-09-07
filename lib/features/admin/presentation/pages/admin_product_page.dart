@@ -51,6 +51,8 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
   final Map<String, dynamic> _tenantQp;
   int _page = 1;
   bool _hasMore = true;
+  String _search = '';
+  int? _categoryId;
 
   bool get hasMore => _hasMore;
 
@@ -58,13 +60,16 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
     load();
   }
 
-  Future<void> load({String? search}) async {
+  Future<void> load({String? search, int? categoryId}) async {
+    _search = search ?? _search;
+    _categoryId = categoryId ?? _categoryId;
     _page = 1;
     _hasMore = true;
     state = const AsyncValue.loading();
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
-      if (search != null) params['search'] = search;
+      final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 50};
+      if (_search.isNotEmpty) params['search'] = _search;
+      if (_categoryId != null) params['category_id'] = _categoryId;
       final res = await _dio.get('/superadmin/products', queryParameters: params);
       final data = res.data;
       List list;
@@ -75,7 +80,7 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
       } else {
         list = [];
       }
-      _hasMore = list.length >= 20;
+      _hasMore = list.length >= 50;
       state = AsyncValue.data(list.map((e) => Map<String, dynamic>.from(e)).toList());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -86,7 +91,9 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
     if (!_hasMore) return;
     _page++;
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
+      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 50};
+      if (_search.isNotEmpty) params['search'] = _search;
+      if (_categoryId != null) params['category_id'] = _categoryId;
       final res = await _dio.get('/superadmin/products', queryParameters: params);
       final data = res.data;
       List list;
@@ -95,7 +102,7 @@ class AdminProductsNotifier extends StateNotifier<AsyncValue<List<Map>>> {
       } else {
         list = [];
       }
-      _hasMore = list.length >= 20;
+      _hasMore = list.length >= 50;
       final current = state.valueOrNull ?? [];
       state = AsyncValue.data([...current, ...list.map((e) => Map<String, dynamic>.from(e))]);
     } catch (_) {}
@@ -123,6 +130,7 @@ class AdminProductListPage extends ConsumerStatefulWidget {
 
 class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
   final _searchCtrl = TextEditingController();
+  int? _selectedCategoryId;
 
   @override
   void dispose() {
@@ -141,6 +149,7 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(adminProductsProvider);
+    final categories = ref.watch(adminCategoryListProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -152,22 +161,80 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'Cari produk...',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () { _searchCtrl.clear(); ref.read(adminProductsProvider.notifier).load(); })
+                    ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () {
+                        _searchCtrl.clear();
+                        ref.read(adminProductsProvider.notifier).load(search: '');
+                      })
                     : null,
                 filled: true,
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              onSubmitted: (v) => ref.read(adminProductsProvider.notifier).load(search: v.trim()),
+              onChanged: (v) {
+                setState(() {});
+                ref.read(adminProductsProvider.notifier).load(search: v.trim());
+              },
             ),
+          ),
+          categories.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (cats) {
+              if (cats.isEmpty) return const SizedBox.shrink();
+              return Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text('Semua', style: TextStyle(
+                          fontSize: 12,
+                          color: _selectedCategoryId == null ? Colors.white : Colors.grey.shade700,
+                        )),
+                        selected: _selectedCategoryId == null,
+                        onSelected: (_) => setState(() {
+                          _selectedCategoryId = null;
+                          ref.read(adminProductsProvider.notifier).load(categoryId: null);
+                        }),
+                        selectedColor: theme.colorScheme.primary,
+                        backgroundColor: Colors.grey.shade100,
+                        checkmarkColor: Colors.white,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    ...cats.map((cat) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(cat['name'] ?? '-', style: TextStyle(
+                          fontSize: 12,
+                          color: _selectedCategoryId == cat['id'] ? Colors.white : Colors.grey.shade700,
+                        )),
+                        selected: _selectedCategoryId == cat['id'],
+                        onSelected: (_) => setState(() {
+                          _selectedCategoryId = cat['id'];
+                          ref.read(adminProductsProvider.notifier).load(categoryId: cat['id']);
+                        }),
+                        selectedColor: theme.colorScheme.primary,
+                        backgroundColor: Colors.grey.shade100,
+                        checkmarkColor: Colors.white,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    )),
+                  ],
+                ),
+              );
+            },
           ),
           Expanded(
             child: products.when(
