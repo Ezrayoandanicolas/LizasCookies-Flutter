@@ -266,31 +266,34 @@ class _StockProductGridCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                    const Spacer(),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: stockQty > 0
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(name,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
                         ),
-                        child: Text(
-                          'Stok: $stockQty',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
                             color: stockQty > 0
-                                ? Colors.green.shade700
-                                : Colors.red.shade700,
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Stok: $stockQty',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: stockQty > 0
+                                  ? Colors.green.shade700
+                                  : Colors.red.shade700,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),

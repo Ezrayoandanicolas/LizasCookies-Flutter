@@ -252,18 +252,21 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
                   ? const Center(child: Text('Belum ada produk'))
                   : NotificationListener<ScrollNotification>(
                       onNotification: _onScrollNotification,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          childAspectRatio: 0.65,
+                        ),
                         itemCount: items.length + (ref.read(adminProductsProvider.notifier).hasMore ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index == items.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
+                            return const Center(child: CircularProgressIndicator());
                           }
                           final p = items[index];
-                          return _ProductCard(product: p);
+                          return _ProductGridCard(product: p);
                         },
                       ),
                     ),
@@ -275,6 +278,74 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
         onPressed: () => context.push('/admin/product/add'),
         backgroundColor: theme.colorScheme.primary,
         child: Icon(Icons.add, color: theme.colorScheme.onPrimary),
+      ),
+    );
+  }
+}
+
+class _ProductGridCard extends ConsumerWidget {
+  final Map product;
+  const _ProductGridCard({required this.product});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final thumbnail = ImageHelper.resolve(product['thumbnail']?.toString());
+    final name = product['name'] ?? '-';
+    final price = product['price']?.toString() ?? '0';
+    final cats = product['categories'];
+    String catDisplay = '-';
+    if (cats is List && cats.isNotEmpty) {
+      catDisplay = cats.map((c) => c is Map ? c['name']?.toString() : c?.toString()).whereType<String>().join(', ');
+    } else {
+      final category = product['category'];
+      if (category is Map) catDisplay = category['name']?.toString() ?? '-';
+    }
+    final theme = Theme.of(context);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/admin/product/edit/${product['id']}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                color: Colors.grey.shade100,
+                child: thumbnail != null
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        child: CachedNetworkImage(imageUrl: thumbnail, fit: BoxFit.cover),
+                      )
+                    : Icon(Icons.cookie, size: 40, color: theme.colorScheme.primary),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    const Spacer(),
+                    Text(CurrencyFormatter.idr(num.tryParse(price) ?? 0),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
+                    const SizedBox(height: 2),
+                    Text(catDisplay,
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
