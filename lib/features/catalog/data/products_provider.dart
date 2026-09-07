@@ -137,6 +137,20 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductItem>>> {
     LocalStorage.cacheProducts(_cacheKey, encoded);
   }
 
+  void reloadAfterStockAdjust(int productId, int newStock) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = current.map((p) {
+      if (p.id != productId) return p;
+      return ProductItem(
+        id: p.id, name: p.name, sku: p.sku, price: p.price, image: p.image,
+        categoryName: p.categoryName, categories: p.categories, type: p.type, stock: newStock,
+      );
+    }).toList();
+    state = AsyncValue.data(updated);
+    LocalStorage.cacheProducts(_cacheKey, jsonEncode(updated.map((p) => p.toJson()).toList()));
+  }
+
   String? _lastCacheKey;
 
   Future<void> load({String? search}) async {

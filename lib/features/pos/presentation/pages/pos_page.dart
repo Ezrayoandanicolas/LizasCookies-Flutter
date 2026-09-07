@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../../catalog/data/products_provider.dart';
 import '../../../cart/data/cart_provider.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/network/connectivity_provider.dart';
+import '../../../../core/providers/store_provider.dart';
+import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/network/dio_client.dart';
 import 'checkout_sheet.dart';
 
 class POSPage extends ConsumerStatefulWidget {
@@ -539,13 +543,20 @@ class _ProductCard extends ConsumerWidget {
   final ProductItem product;
   const _ProductCard({required this.product});
 
+  Color _stockColor(ThemeData theme, int stock) {
+    if (stock <= 0) return theme.colorScheme.error;
+    if (stock <= 5) return Colors.orange.shade700;
+    return theme.colorScheme.onSurfaceVariant;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
     final theme = Theme.of(context);
-    final inCart =
-        cart.items.where((i) => i.productId == product.id).toList();
+    final inCart = cart.items.where((i) => i.productId == product.id).toList();
     final qtyInCart = inCart.isNotEmpty ? inCart.first.quantity : 0;
+    final stock = product.stock;
+    final stockIsLow = stock <= 5;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -564,73 +575,89 @@ class _ProductCard extends ConsumerWidget {
                       placeholder: (_, __) => Center(
                         child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
                       ),
-                      errorWidget: (_, __, ___) => Icon(
-                        Icons.cookie,
-                        size: 32,
-                        color: theme.colorScheme.primary,
-                      ),
+                      errorWidget: (_, __, ___) => Icon(Icons.cookie, size: 32, color: theme.colorScheme.primary),
                     )
-                  : Icon(
-                      Icons.cookie,
-                      size: 32,
-                      color: theme.colorScheme.primary,
-                    ),
+                  : Icon(Icons.cookie, size: 32, color: theme.colorScheme.primary),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-            child: Text(
-              product.name,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(product.name, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500), maxLines: 3, overflow: TextOverflow.ellipsis),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
-            child: Text(
-              CurrencyFormatter.idr(product.price),
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.primary,
-                fontSize: 10,
-              ),
-            ),
+            child: Text(CurrencyFormatter.idr(product.price), style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.primary, fontSize: 10)),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
-            child: Text(
-              'Stok: ${product.stock}',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: product.stock > 0
-                    ? theme.colorScheme.onSurfaceVariant
-                    : theme.colorScheme.error,
-                fontSize: 9,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: _stockColor(theme, stock).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Stok: $stock',
+                style: theme.textTheme.labelSmall?.copyWith(color: _stockColor(theme, stock), fontWeight: FontWeight.w600, fontSize: 9),
               ),
             ),
           ),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-            child: qtyInCart > 0
-                ? _QtyControls(productId: product.id, qty: qtyInCart)
-                : SizedBox(
-                    width: double.infinity,
-                    height: 26,
-                    child: FilledButton.tonal(
-                      onPressed: () => _showAddQtyDialog(context, ref),
-                      style: FilledButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+            child: stockIsLow
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 24,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showAddStockDialog(context, ref),
+                          icon: const Icon(Icons.add_circle_outline, size: 12),
+                          label: const Text('Tambah Stok', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            side: BorderSide(color: Colors.orange.shade700),
+                            foregroundColor: Colors.orange.shade700,
+                          ),
                         ),
                       ),
-                      child: const Text('Tambah',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
+                      if (qtyInCart > 0) ...[
+                        const SizedBox(height: 4),
+                        _QtyControls(productId: product.id, qty: qtyInCart),
+                      ] else if (stock > 0) ...[
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 24,
+                          child: FilledButton.tonal(
+                            onPressed: () => _showAddQtyDialog(context, ref),
+                            style: FilledButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            ),
+                            child: const Text('Tambah', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                : qtyInCart > 0
+                    ? _QtyControls(productId: product.id, qty: qtyInCart)
+                    : SizedBox(
+                        width: double.infinity,
+                        height: 26,
+                        child: FilledButton.tonal(
+                          onPressed: () => _showAddQtyDialog(context, ref),
+                          style: FilledButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          ),
+                          child: const Text('Tambah', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
           ),
         ],
       ),
@@ -705,6 +732,103 @@ class _ProductCard extends ConsumerWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('Tambah ke Keranjang'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddStockDialog(BuildContext context, WidgetRef ref) {
+    final qtyCtrl = TextEditingController(text: '1');
+    final store = ref.read(selectedAdminStoreProvider);
+    if (store == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih toko terlebih dahulu'), backgroundColor: Colors.orange));
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.add_circle_outline, color: Colors.orange.shade700, size: 22),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Tambah Stok', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('${product.name} — Stok: ${product.stock}', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: qtyCtrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(labelText: 'Jumlah', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _QuickQtyBtn(label: '5', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '10', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '25', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '50', ctrl: qtyCtrl),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final qty = int.tryParse(qtyCtrl.text);
+                  if (qty == null || qty <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Masukkan jumlah valid'), backgroundColor: Colors.red));
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  try {
+                    final dio = ref.read(dioClientProvider).dio;
+                    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+                    final res = await dio.post(
+                      '/superadmin/products/${product.id}/stores/${store.id}/adjust-stock',
+                      data: {'delta': qty, ...tenantQp},
+                    );
+                    final newStock = res.data['new_stock'] ?? (product.stock + qty);
+                    ref.read(productsProvider.notifier).reloadAfterStockAdjust(product.id, newStock as int);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok ditambah $qty → $newStock'), backgroundColor: Colors.green));
+                    }
+                  } catch (e) {
+                    String msg = 'Gagal tambah stok';
+                    if (e is DioException && e.response?.data != null) {
+                      final resp = e.response!.data;
+                      msg = resp['message'] ?? resp['error'] ?? msg;
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Tambah Stok'),
               ),
             ),
           ],
