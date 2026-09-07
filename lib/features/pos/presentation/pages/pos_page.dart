@@ -695,7 +695,7 @@ class _ProductCard extends ConsumerWidget {
             TextField(
               controller: qtyCtrl,
               keyboardType: TextInputType.number,
-              autofocus: true,
+              autofocus: false,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
@@ -775,7 +775,7 @@ class _ProductCard extends ConsumerWidget {
             TextField(
               controller: qtyCtrl,
               keyboardType: TextInputType.number,
-              autofocus: true,
+              autofocus: false,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(labelText: 'Jumlah', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
