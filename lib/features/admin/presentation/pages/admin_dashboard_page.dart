@@ -3,14 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/domain/entities/auth_entity.dart';
 
-final dashboardStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final dashboardStatsProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
   final dio = ref.watch(dioClientProvider).dio;
-  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  final tenantQp =
+      ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   try {
-    final res = await dio.get('/superadmin/dashboard/stats', queryParameters: tenantQp);
+    final res =
+        await dio.get('/superadmin/dashboard/stats', queryParameters: tenantQp);
     final data = res.data;
     if (data is Map && data.containsKey('data')) {
       return Map<String, dynamic>.from(data['data']);
@@ -45,13 +49,16 @@ class AdminDashboardPage extends ConsumerWidget {
         title: const Text('Dashboard Admin'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(
+            Responsive.padding(context, mobile: 12, tablet: 14, desktop: 16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             statsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
+              loading: () => Padding(
+                padding: EdgeInsets.symmetric(
+                    vertical: Responsive.spacing(context,
+                        mobile: 16, tablet: 20, desktop: 24)),
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (_, __) => const SizedBox.shrink(),
@@ -59,37 +66,97 @@ class AdminDashboardPage extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _StatCard(icon: Icons.shopping_bag, label: 'Pesanan', value: '${stats['total_orders'] ?? 0}', color: theme.colorScheme.primary)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(icon: Icons.attach_money, label: 'Pendapatan', value: 'Rp ${_formatNumber(stats['revenue'] ?? 0)}', color: theme.colorScheme.tertiary)),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.shopping_bag,
+                              label: 'Pesanan',
+                              value: '${stats['total_orders'] ?? 0}',
+                              color: theme.colorScheme.primary)),
+                      SizedBox(width: Responsive.spacing(context)),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.attach_money,
+                              label: 'Pendapatan',
+                              value:
+                                  'Rp ${_formatNumber(stats['revenue'] ?? 0)}',
+                              color: theme.colorScheme.tertiary)),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: Responsive.spacing(context)),
                   Row(
                     children: [
-                      Expanded(child: _StatCard(icon: Icons.inventory, label: 'Produk', value: '${stats['total_products'] ?? 0}', color: theme.colorScheme.secondary)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(icon: Icons.money_off, label: 'Pengeluaran', value: 'Rp ${_formatNumber(stats['expenses'] ?? 0)}', color: theme.colorScheme.error)),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.inventory,
+                              label: 'Produk',
+                              value: '${stats['total_products'] ?? 0}',
+                              color: theme.colorScheme.secondary)),
+                      SizedBox(width: Responsive.spacing(context)),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.money_off,
+                              label: 'Pengeluaran',
+                              value:
+                                  'Rp ${_formatNumber(stats['expenses'] ?? 0)}',
+                              color: theme.colorScheme.error)),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(
+                      height: Responsive.spacing(context,
+                          mobile: 16, tablet: 20, desktop: 24)),
                 ],
               ),
             ),
-
-            Text('Menu', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-
-            _MenuTile(icon: Icons.point_of_sale, title: 'POS (Point of Sale)', subtitle: 'Transaksi penjualan langsung', onTap: () => context.push('/pos')),
-            _MenuTile(icon: Icons.inventory_2, title: 'Manajemen Produk', subtitle: 'Tambah, edit, hapus produk', onTap: () => context.push('/admin/products')),
-            _MenuTile(icon: Icons.category, title: 'Kategori Produk', subtitle: 'Kelola kategori', onTap: () => context.push('/admin/categories')),
-            _MenuTile(icon: Icons.inventory, title: 'Kelola Stok', subtitle: 'Tambah, kurangi, atur stok produk', onTap: () => context.push('/admin/stock')),
-            _MenuTile(icon: Icons.receipt_long, title: 'Pesanan', subtitle: 'Lihat & kelola pesanan', onTap: () => context.push('/orders')),
-            _MenuTile(icon: Icons.bar_chart, title: 'Laporan & Analitik', subtitle: 'Statistik penjualan, laba rugi', onTap: () => context.push('/admin/analytics')),
-            _MenuTile(icon: Icons.money_off, title: 'Pengeluaran', subtitle: 'Catat & kelola pengeluaran', onTap: () => context.push('/admin/expenses')),
+            Text('Menu',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            SizedBox(height: Responsive.spacing(context)),
+            _MenuTile(
+                icon: Icons.point_of_sale,
+                title: 'POS (Point of Sale)',
+                subtitle: 'Transaksi penjualan langsung',
+                onTap: () => context.push('/pos')),
+            _MenuTile(
+                icon: Icons.inventory_2,
+                title: 'Manajemen Produk',
+                subtitle: 'Tambah, edit, hapus produk',
+                onTap: () => context.push('/admin/products')),
+            _MenuTile(
+                icon: Icons.category,
+                title: 'Kategori Produk',
+                subtitle: 'Kelola kategori',
+                onTap: () => context.push('/admin/categories')),
+            _MenuTile(
+                icon: Icons.inventory,
+                title: 'Kelola Stok',
+                subtitle: 'Tambah, kurangi, atur stok produk',
+                onTap: () => context.push('/admin/stock')),
+            _MenuTile(
+                icon: Icons.receipt_long,
+                title: 'Pesanan',
+                subtitle: 'Lihat & kelola pesanan',
+                onTap: () => context.push('/orders')),
+            _MenuTile(
+                icon: Icons.bar_chart,
+                title: 'Laporan & Analitik',
+                subtitle: 'Statistik penjualan, laba rugi',
+                onTap: () => context.push('/admin/analytics')),
+            _MenuTile(
+                icon: Icons.money_off,
+                title: 'Pengeluaran',
+                subtitle: 'Catat & kelola pengeluaran',
+                onTap: () => context.push('/admin/expenses')),
             if (user?.isAdmin == true) ...[
-              _MenuTile(icon: Icons.people, title: 'Manajemen User', subtitle: 'Kelola staff & member', onTap: () => context.push('/admin/users')),
-              _MenuTile(icon: Icons.store, title: 'Manajemen Toko', subtitle: 'Pengaturan toko', onTap: () => context.push('/admin/stores')),
+              _MenuTile(
+                  icon: Icons.people,
+                  title: 'Manajemen User',
+                  subtitle: 'Kelola staff & member',
+                  onTap: () => context.push('/admin/users')),
+              _MenuTile(
+                  icon: Icons.store,
+                  title: 'Manajemen Toko',
+                  subtitle: 'Pengaturan toko',
+                  onTap: () => context.push('/admin/stores')),
             ],
           ],
         ),
@@ -104,7 +171,11 @@ class _StatCard extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _StatCard({required this.icon, required this.label, required this.value, required this.color});
+  const _StatCard(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -112,15 +183,22 @@ class _StatCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(
+            Responsive.padding(context, mobile: 12, tablet: 14, desktop: 16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: color, size: 28),
-            const SizedBox(height: 12),
-            Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            SizedBox(height: Responsive.spacing(context)),
+            Text(value,
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            SizedBox(
+                height: Responsive.spacing(context,
+                    mobile: 4, tablet: 4, desktop: 4)),
+            Text(label,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ],
         ),
       ),
@@ -134,13 +212,19 @@ class _MenuTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _MenuTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _MenuTile(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(
+          bottom:
+              Responsive.spacing(context, mobile: 6, tablet: 8, desktop: 8)),
       child: ListTile(
         leading: Container(
           width: 40,

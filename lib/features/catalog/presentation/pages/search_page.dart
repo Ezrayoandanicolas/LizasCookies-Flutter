@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,7 +46,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             border: InputBorder.none,
             hintStyle: TextStyle(color: AppColors.outline),
           ),
-          onSubmitted: (q) => ref.read(searchNotifierProvider.notifier).search(q),
+          onSubmitted: (q) =>
+              ref.read(searchNotifierProvider.notifier).search(q),
           textInputAction: TextInputAction.search,
         ),
         actions: [
@@ -64,34 +66,38 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (items) {
           if (_controller.text.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.search, size: 48, color: AppColors.outline),
-                  SizedBox(height: 16),
-                  Text('Ketik untuk mencari produk', style: TextStyle(color: AppColors.outline)),
+                  const Icon(Icons.search, size: 48, color: AppColors.outline),
+                  SizedBox(height: Responsive.spacing(context)),
+                  const Text('Ketik untuk mencari produk',
+                      style: TextStyle(color: AppColors.outline)),
                 ],
               ),
             );
           }
           if (items.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.search_off, size: 48, color: AppColors.outline),
-                  SizedBox(height: 16),
-                  Text('Tidak ada hasil ditemukan', style: TextStyle(color: AppColors.outline)),
+                  const Icon(Icons.search_off,
+                      size: 48, color: AppColors.outline),
+                  SizedBox(height: Responsive.spacing(context)),
+                  const Text('Tidak ada hasil ditemukan',
+                      style: TextStyle(color: AppColors.outline)),
                 ],
               ),
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(Responsive.padding(context)),
             itemCount: items.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) => _buildResultItem(context, items[index]),
+            itemBuilder: (context, index) =>
+                _buildResultItem(context, items[index]),
           );
         },
       ),
@@ -111,7 +117,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ? CachedNetworkImage(
                   imageUrl: product.images.first,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const Icon(Icons.cookie, color: AppColors.primaryLight),
+                  errorWidget: (_, __, ___) =>
+                      const Icon(Icons.cookie, color: AppColors.primaryLight),
                 )
               : const Icon(Icons.cookie, color: AppColors.primaryLight),
         ),

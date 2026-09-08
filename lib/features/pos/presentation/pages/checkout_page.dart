@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import 'checkout_sheet.dart';
 
 class CheckoutPage extends StatelessWidget {

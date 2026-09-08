@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
@@ -10,7 +11,8 @@ class MemberOrderItem {
   final int quantity;
   final double price;
 
-  const MemberOrderItem({required this.name, required this.quantity, required this.price});
+  const MemberOrderItem(
+      {required this.name, required this.quantity, required this.price});
   double get total => price * quantity;
 
   factory MemberOrderItem.fromJson(Map<String, dynamic> json) {
@@ -66,25 +68,33 @@ class MemberOrderData {
     final itemsList = <MemberOrderItem>[];
     if (json['items'] is List) {
       itemsList.addAll(
-        (json['items'] as List).map((e) => MemberOrderItem.fromJson(e as Map<String, dynamic>)),
+        (json['items'] as List)
+            .map((e) => MemberOrderItem.fromJson(e as Map<String, dynamic>)),
       );
     }
 
     return MemberOrderData(
       id: (json['id'] ?? 0).toInt(),
       status: (json['status'] ?? 'pending').toString().toLowerCase(),
-      totalAmount: double.tryParse((json['total_amount'] ?? json['total'] ?? 0).toString()) ?? 0,
-      discountAmount: double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
+      totalAmount: double.tryParse(
+              (json['total_amount'] ?? json['total'] ?? 0).toString()) ??
+          0,
+      discountAmount:
+          double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
       paymentMethod: (json['payment_method'] ?? '-').toString(),
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
       items: itemsList,
       notes: json['notes']?.toString(),
-      storeName: json['store'] is Map ? json['store']['name']?.toString() : null,
+      storeName:
+          json['store'] is Map ? json['store']['name']?.toString() : null,
     );
   }
 }
 
-class MemberOrdersNotifier extends StateNotifier<AsyncValue<List<MemberOrderData>>> {
+class MemberOrdersNotifier
+    extends StateNotifier<AsyncValue<List<MemberOrderData>>> {
   final Dio _dio;
 
   MemberOrdersNotifier(this._dio) : super(const AsyncValue.loading()) {
@@ -105,7 +115,9 @@ class MemberOrdersNotifier extends StateNotifier<AsyncValue<List<MemberOrderData
         list = [];
       }
       state = AsyncValue.data(
-        list.map((e) => MemberOrderData.fromJson(e as Map<String, dynamic>)).toList(),
+        list
+            .map((e) => MemberOrderData.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -113,7 +125,8 @@ class MemberOrdersNotifier extends StateNotifier<AsyncValue<List<MemberOrderData
   }
 }
 
-final memberOrdersProvider = StateNotifierProvider<MemberOrdersNotifier, AsyncValue<List<MemberOrderData>>>((ref) {
+final memberOrdersProvider = StateNotifierProvider<MemberOrdersNotifier,
+    AsyncValue<List<MemberOrderData>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
   return MemberOrdersNotifier(dio);
 });
@@ -124,7 +137,8 @@ class MemberOrdersPage extends ConsumerStatefulWidget {
   ConsumerState<MemberOrdersPage> createState() => _MemberOrdersPageState();
 }
 
-class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with SingleTickerProviderStateMixin {
+class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -140,25 +154,36 @@ class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with Single
   }
 
   String _fmt(double amount) => CurrencyFormatter.idr(amount);
-  String _fmtDate(DateTime? d) => d != null ? DateFormat('dd MMM yyyy, HH:mm').format(d) : '-';
+  String _fmtDate(DateTime? d) =>
+      d != null ? DateFormat('dd MMM yyyy, HH:mm').format(d) : '-';
 
   Color _statusColor(String s) {
     switch (s) {
-      case 'pending': return Colors.orange;
-      case 'processing': return Colors.blue;
-      case 'completed': return Colors.green;
-      case 'cancelled': return Colors.red;
-      default: return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'processing':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
   String _statusLabel(String s) {
     switch (s) {
-      case 'pending': return 'Menunggu';
-      case 'processing': return 'Diproses';
-      case 'completed': return 'Selesai';
-      case 'cancelled': return 'Dibatalkan';
-      default: return s.toUpperCase();
+      case 'pending':
+        return 'Menunggu';
+      case 'processing':
+        return 'Diproses';
+      case 'completed':
+        return 'Selesai';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return s.toUpperCase();
     }
   }
 
@@ -186,9 +211,14 @@ class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with Single
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 12),
-              Text('Gagal memuat pesanan', style: TextStyle(color: Colors.grey.shade600)),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
+              Text('Gagal memuat pesanan',
+                  style: TextStyle(color: Colors.grey.shade600)),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               ElevatedButton(
                 onPressed: () => ref.read(memberOrdersProvider.notifier).load(),
                 child: const Text('Coba Lagi'),
@@ -198,9 +228,13 @@ class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with Single
         ),
         data: (orders) {
           final all = orders;
-          final processed = orders.where((o) => o.status == 'pending' || o.status == 'processing').toList();
-          final completed = orders.where((o) => o.status == 'completed').toList();
-          final cancelled = orders.where((o) => o.status == 'cancelled').toList();
+          final processed = orders
+              .where((o) => o.status == 'pending' || o.status == 'processing')
+              .toList();
+          final completed =
+              orders.where((o) => o.status == 'completed').toList();
+          final cancelled =
+              orders.where((o) => o.status == 'cancelled').toList();
 
           final lists = [all, processed, completed, cancelled];
 
@@ -212,9 +246,14 @@ class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with Single
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('Belum ada pesanan', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
+                      Icon(Icons.receipt_long,
+                          size: 64, color: Colors.grey.shade300),
+                      SizedBox(
+                          height: Responsive.spacing(context,
+                              mobile: 10, tablet: 12, desktop: 14)),
+                      Text('Belum ada pesanan',
+                          style: TextStyle(
+                              fontSize: 16, color: Colors.grey.shade500)),
                     ],
                   ),
                 );
@@ -222,7 +261,11 @@ class _MemberOrdersPageState extends ConsumerState<MemberOrdersPage> with Single
               return RefreshIndicator(
                 onRefresh: () => ref.read(memberOrdersProvider.notifier).load(),
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  padding: EdgeInsets.symmetric(
+                      vertical: Responsive.spacing(context,
+                          mobile: 8, tablet: 10, desktop: 12),
+                      horizontal: Responsive.padding(context,
+                          mobile: 12, tablet: 14, desktop: 16)),
                   itemCount: list.length,
                   itemBuilder: (context, index) => _MemberOrderCard(
                     order: list[index],
@@ -265,23 +308,29 @@ class _MemberOrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showDetail(context),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(
+              Responsive.padding(context, mobile: 12, tablet: 14, desktop: 16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Text(order.orderNumber,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(statusLabel(order.status),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: color)),
                   ),
                 ],
               ),
@@ -294,7 +343,9 @@ class _MemberOrderCard extends StatelessWidget {
                   children: [
                     const Icon(Icons.store, size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(order.storeName!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(order.storeName!,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ],
@@ -307,10 +358,16 @@ class _MemberOrderCard extends StatelessWidget {
               Row(
                 children: [
                   Text(fmt(order.finalTotal),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFE85D3A))),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE85D3A))),
                   const Spacer(),
                   Text(order.paymentMethod.toUpperCase(),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500)),
                 ],
               ),
             ],
@@ -334,9 +391,11 @@ class _MemberOrderCard extends StatelessWidget {
               _row('Tanggal', fmtDate(order.createdAt)),
               _row('Pembayaran', order.paymentMethod.toUpperCase()),
               if (order.storeName != null) _row('Toko', order.storeName!),
-              if (order.discountAmount > 0) _row('Diskon', fmt(order.discountAmount)),
+              if (order.discountAmount > 0)
+                _row('Diskon', fmt(order.discountAmount)),
               const Divider(height: 24),
-              const Text('Item:', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Item:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               if (order.items.isEmpty)
                 const Text('Tidak ada item')
@@ -345,8 +404,11 @@ class _MemberOrderCard extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
-                          Expanded(child: Text('${item.name} x${item.quantity}', style: const TextStyle(fontSize: 13))),
-                          Text(fmt(item.total), style: const TextStyle(fontSize: 13)),
+                          Expanded(
+                              child: Text('${item.name} x${item.quantity}',
+                                  style: const TextStyle(fontSize: 13))),
+                          Text(fmt(item.total),
+                              style: const TextStyle(fontSize: 13)),
                         ],
                       ),
                     )),
@@ -354,20 +416,27 @@ class _MemberOrderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const Text('Total',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   Text(fmt(order.finalTotal),
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFFE85D3A))),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: Color(0xFFE85D3A))),
                 ],
               ),
               if (order.notes != null && order.notes!.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Catatan: ${order.notes}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                Text('Catatan: ${order.notes}',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey)),
               ],
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
         ],
       ),
     );

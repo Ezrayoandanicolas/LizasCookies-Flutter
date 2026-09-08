@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
@@ -62,7 +63,9 @@ class _MemberAddressPageState extends ConsumerState<MemberAddressPage> {
         title: const Text('Hapus Alamat'),
         content: Text('Hapus alamat "${address['label'] ?? ''}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -77,7 +80,8 @@ class _MemberAddressPageState extends ConsumerState<MemberAddressPage> {
       await dio.delete('/member/addresses/${address['id']}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Alamat dihapus'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Alamat dihapus'), backgroundColor: Colors.green),
         );
       }
       _load();
@@ -111,32 +115,42 @@ class _MemberAddressPageState extends ConsumerState<MemberAddressPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_off_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 16),
-                      Text('Belum ada alamat', style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      Icon(Icons.location_off_outlined,
+                          size: 64,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4)),
+                      SizedBox(height: Responsive.spacing(context)),
+                      Text('Belum ada alamat',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
                       const SizedBox(height: 8),
-                      Text('Tambahkan alamat pengiriman Anda', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      Text('Tambahkan alamat pengiriman Anda',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(Responsive.padding(context)),
                     itemCount: _addresses.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final a = _addresses[index];
-                      final isDefault = a['is_default'] == true || a['is_default'] == 1;
+                      final isDefault =
+                          a['is_default'] == true || a['is_default'] == 1;
                       return Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: isDefault
-                              ? BorderSide(color: theme.colorScheme.primary, width: 1.5)
+                              ? BorderSide(
+                                  color: theme.colorScheme.primary, width: 1.5)
                               : BorderSide.none,
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(Responsive.padding(context,
+                              mobile: 12, tablet: 14, desktop: 16)),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -145,42 +159,59 @@ class _MemberAddressPageState extends ConsumerState<MemberAddressPage> {
                                   Expanded(
                                     child: Text(
                                       a['label'] ?? '-',
-                                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                   if (isDefault)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.primaryContainer,
+                                        color:
+                                            theme.colorScheme.primaryContainer,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         'Utama',
-                                        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                                color:
+                                                    theme.colorScheme.primary,
+                                                fontWeight: FontWeight.w600),
                                       ),
                                     ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(a['recipient_name'] ?? '-', style: theme.textTheme.bodyMedium),
-                              if (a['phone'] != null && a['phone'].toString().isNotEmpty)
-                                Text(a['phone'], style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                              Text(a['recipient_name'] ?? '-',
+                                  style: theme.textTheme.bodyMedium),
+                              if (a['phone'] != null &&
+                                  a['phone'].toString().isNotEmpty)
+                                Text(a['phone'],
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant)),
                               const SizedBox(height: 4),
                               Text(
                                 '${a['address'] ?? ''}, ${a['city'] ?? ''}, ${a['province'] ?? ''} ${a['postal_code'] ?? ''}',
-                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant),
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 20),
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 20),
                                     onPressed: () => _addOrEdit(address: a),
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.delete_outline, size: 20, color: theme.colorScheme.error),
+                                    icon: Icon(Icons.delete_outline,
+                                        size: 20,
+                                        color: theme.colorScheme.error),
                                     onPressed: () => _delete(a),
                                   ),
                                 ],
@@ -303,7 +334,12 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          MediaQuery.of(context).viewInsets.bottom +
+              Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24)),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -313,23 +349,40 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
             children: [
               Text(
                 isEdit ? 'Edit Alamat' : 'Tambah Alamat',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: Responsive.spacing(context)),
               _field(_labelCtrl, 'Label (Rumah, Kantor, dll.)', required: true),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               _field(_nameCtrl, 'Nama Penerima', required: true),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               _field(_phoneCtrl, 'Telepon', keyboardType: TextInputType.phone),
-              const SizedBox(height: 12),
-              _field(_addressCtrl, 'Alamat Lengkap', required: true, maxLines: 2),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
+              _field(_addressCtrl, 'Alamat Lengkap',
+                  required: true, maxLines: 2),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               _field(_cityCtrl, 'Kota/Kabupaten', required: true),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               _field(_provinceCtrl, 'Provinsi', required: true),
-              const SizedBox(height: 12),
-              _field(_postalCtrl, 'Kode Pos', keyboardType: TextInputType.number),
-              const SizedBox(height: 12),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
+              _field(_postalCtrl, 'Kode Pos',
+                  keyboardType: TextInputType.number),
+              SizedBox(
+                  height: Responsive.spacing(context,
+                      mobile: 10, tablet: 12, desktop: 14)),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Jadikan alamat utama'),
@@ -342,7 +395,11 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
                 child: FilledButton(
                   onPressed: _saving ? null : _save,
                   child: _saving
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : Text(isEdit ? 'Simpan Perubahan' : 'Tambah Alamat'),
                 ),
               ),
@@ -353,12 +410,15 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
     );
   }
 
-  Widget _field(TextEditingController ctrl, String label, {bool required = false, int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _field(TextEditingController ctrl, String label,
+      {bool required = false, int maxLines = 1, TextInputType? keyboardType}) {
     return TextFormField(
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null : null,
+      validator: required
+          ? (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null
+          : null,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

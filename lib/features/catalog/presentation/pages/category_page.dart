@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,11 +39,15 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
             return const Center(child: Text('Tidak ada produk'));
           }
           return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+            padding: EdgeInsets.all(Responsive.padding(context,
+                mobile: 12, tablet: 14, desktop: 16)),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: Responsive.gridColumns(context,
+                  mobile: 2, tablet: 3, desktop: 4),
+              mainAxisSpacing: Responsive.spacing(context,
+                  mobile: 10, tablet: 12, desktop: 14),
+              crossAxisSpacing: Responsive.spacing(context,
+                  mobile: 10, tablet: 12, desktop: 14),
               childAspectRatio: 0.7,
             ),
             itemCount: items.length,
@@ -72,9 +77,11 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
                     ? CachedNetworkImage(
                         imageUrl: product.images.first,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Icon(Icons.cookie, size: 48, color: AppColors.primaryLight),
+                        errorWidget: (_, __, ___) => const Icon(Icons.cookie,
+                            size: 48, color: AppColors.primaryLight),
                       )
-                    : const Icon(Icons.cookie, size: 48, color: AppColors.primaryLight),
+                    : const Icon(Icons.cookie,
+                        size: 48, color: AppColors.primaryLight),
               ),
             ),
             Padding(
@@ -84,7 +91,8 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

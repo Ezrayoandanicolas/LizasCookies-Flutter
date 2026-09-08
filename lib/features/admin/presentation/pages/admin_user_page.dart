@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/utils/responsive.dart';
 
-final adminUsersProvider = StateNotifierProvider<AdminUsersNotifier, AsyncValue<List<Map>>>((ref) {
+final adminUsersProvider =
+    StateNotifierProvider<AdminUsersNotifier, AsyncValue<List<Map>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
-  final tenantQp = ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+  final tenantQp =
+      ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   return AdminUsersNotifier(dio, tenantQp);
 });
 
@@ -14,7 +17,8 @@ class AdminUsersNotifier extends StateNotifier<AsyncValue<List<Map>>> {
   final Dio _dio;
   final Map<String, dynamic> _tenantQp;
 
-  AdminUsersNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
+  AdminUsersNotifier(this._dio, this._tenantQp)
+      : super(const AsyncValue.loading()) {
     load();
   }
 
@@ -33,7 +37,8 @@ class AdminUsersNotifier extends StateNotifier<AsyncValue<List<Map>>> {
       } else {
         list = [];
       }
-      state = AsyncValue.data(list.map((e) => Map<String, dynamic>.from(e)).toList());
+      state = AsyncValue.data(
+          list.map((e) => Map<String, dynamic>.from(e)).toList());
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -41,7 +46,8 @@ class AdminUsersNotifier extends StateNotifier<AsyncValue<List<Map>>> {
 
   Future<bool> create(Map<String, dynamic> payload) async {
     try {
-      await _dio.post('/superadmin/users', data: payload, queryParameters: _tenantQp);
+      await _dio.post('/superadmin/users',
+          data: payload, queryParameters: _tenantQp);
       await load();
       return true;
     } catch (e) {
@@ -51,7 +57,8 @@ class AdminUsersNotifier extends StateNotifier<AsyncValue<List<Map>>> {
 
   Future<bool> update(int id, Map<String, dynamic> payload) async {
     try {
-      await _dio.put('/superadmin/users/$id', data: payload, queryParameters: _tenantQp);
+      await _dio.put('/superadmin/users/$id',
+          data: payload, queryParameters: _tenantQp);
       await load();
       return true;
     } catch (e) {
@@ -100,7 +107,7 @@ class _AdminUserPageState extends ConsumerState<AdminUserPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(Responsive.padding(context)),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
@@ -116,7 +123,8 @@ class _AdminUserPageState extends ConsumerState<AdminUserPage> {
                       )
                     : null,
               ),
-              onSubmitted: (v) => ref.read(adminUsersProvider.notifier).load(search: v.trim()),
+              onSubmitted: (v) =>
+                  ref.read(adminUsersProvider.notifier).load(search: v.trim()),
             ),
           ),
           Expanded(
@@ -125,11 +133,14 @@ class _AdminUserPageState extends ConsumerState<AdminUserPage> {
               error: (e, _) => Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 12),
-                  Text('Gagal memuat', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 12),
+                  SizedBox(height: Responsive.spacing(context)),
+                  Text('Gagal memuat',
+                      style:
+                          TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                  SizedBox(height: Responsive.spacing(context)),
                   ElevatedButton(
-                    onPressed: () => ref.read(adminUsersProvider.notifier).load(),
+                    onPressed: () =>
+                        ref.read(adminUsersProvider.notifier).load(),
                     child: const Text('Coba Lagi'),
                   ),
                 ]),
@@ -137,7 +148,8 @@ class _AdminUserPageState extends ConsumerState<AdminUserPage> {
               data: (items) => items.isEmpty
                   ? const Center(child: Text('Belum ada user'))
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.padding(context)),
                       itemCount: items.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
@@ -185,20 +197,27 @@ class _AdminUserPageState extends ConsumerState<AdminUserPage> {
           Navigator.pop(ctx);
           bool success;
           if (isEdit) {
-            success = await ref.read(adminUsersProvider.notifier).update(user!['id'], payload);
+            success = await ref
+                .read(adminUsersProvider.notifier)
+                .update(user!['id'], payload);
           } else {
             if (passwordCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password wajib diisi'), backgroundColor: Colors.red),
+                const SnackBar(
+                    content: Text('Password wajib diisi'),
+                    backgroundColor: Colors.red),
               );
               return;
             }
-            success = await ref.read(adminUsersProvider.notifier).create(payload);
+            success =
+                await ref.read(adminUsersProvider.notifier).create(payload);
           }
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(success ? (isEdit ? 'User diperbarui' : 'User ditambahkan') : 'Gagal menyimpan'),
+                content: Text(success
+                    ? (isEdit ? 'User diperbarui' : 'User ditambahkan')
+                    : 'Gagal menyimpan'),
                 backgroundColor: success ? Colors.green : Colors.red,
               ),
             );
@@ -220,19 +239,29 @@ class _UserCard extends ConsumerWidget {
     final role = user['role']?.toString() ?? '-';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(
+          bottom:
+              Responsive.spacing(context, mobile: 6, tablet: 8, desktop: 8)),
       child: ListTile(
         leading: CircleAvatar(
           child: Text(
             name.isNotEmpty ? name[0].toUpperCase() : '?',
           ),
         ),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text('$email \u2022 $role', style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(name,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+        subtitle: Text('$email \u2022 $role',
+            style: const TextStyle(fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
         trailing: PopupMenuButton(
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+            const PopupMenuItem(
+                value: 'delete',
+                child: Text('Hapus', style: TextStyle(color: Colors.red))),
           ],
           onSelected: (v) async {
             if (v == 'edit') {
@@ -244,17 +273,25 @@ class _UserCard extends ConsumerWidget {
                   title: const Text('Hapus User'),
                   content: Text('Hapus "$name"?'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Batal')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Hapus',
+                            style: TextStyle(color: Colors.red))),
                   ],
                 ),
               );
               if (confirmed == true) {
-                final success = await ref.read(adminUsersProvider.notifier).delete(user['id']);
+                final success = await ref
+                    .read(adminUsersProvider.notifier)
+                    .delete(user['id']);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Berhasil dihapus' : 'Gagal menghapus'),
+                      content: Text(
+                          success ? 'Berhasil dihapus' : 'Gagal menghapus'),
                       backgroundColor: success ? Colors.green : Colors.red,
                     ),
                   );
@@ -293,7 +330,9 @@ class _UserCard extends ConsumerWidget {
             payload['password'] = passwordCtrl.text;
           }
           Navigator.pop(ctx);
-          final success = await ref.read(adminUsersProvider.notifier).update(user['id'], payload);
+          final success = await ref
+              .read(adminUsersProvider.notifier)
+              .update(user['id'], payload);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -345,7 +384,12 @@ class _UserFormSheetState extends State<_UserFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24),
+          MediaQuery.of(context).viewInsets.bottom +
+              Responsive.padding(context, mobile: 16, tablet: 20, desktop: 24)),
       child: Form(
         key: _formKey,
         child: Column(
@@ -354,22 +398,27 @@ class _UserFormSheetState extends State<_UserFormSheet> {
           children: [
             Text(
               widget.isEdit ? 'Edit User' : 'Tambah User',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 20),
+            SizedBox(
+                height: Responsive.spacing(context,
+                    mobile: 12, tablet: 16, desktop: 20)),
             TextFormField(
               controller: widget.nameCtrl,
               decoration: const InputDecoration(labelText: 'Nama'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: Responsive.spacing(context)),
             TextFormField(
               controller: widget.emailCtrl,
               decoration: const InputDecoration(labelText: 'Email'),
               keyboardType: TextInputType.emailAddress,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: Responsive.spacing(context)),
             TextFormField(
               controller: widget.passwordCtrl,
               decoration: InputDecoration(
@@ -377,23 +426,28 @@ class _UserFormSheetState extends State<_UserFormSheet> {
               ),
               obscureText: true,
               validator: (v) {
-                if (!widget.isEdit && (v == null || v.trim().isEmpty)) return 'Wajib diisi';
+                if (!widget.isEdit && (v == null || v.trim().isEmpty))
+                  return 'Wajib diisi';
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: Responsive.spacing(context)),
             DropdownButtonFormField<String>(
               value: _selectedRole,
               decoration: const InputDecoration(labelText: 'Role'),
               items: _roles
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r.replaceAll('_', ' ').toUpperCase())))
+                  .map((r) => DropdownMenuItem(
+                      value: r,
+                      child: Text(r.replaceAll('_', ' ').toUpperCase())))
                   .toList(),
               onChanged: (v) {
                 setState(() => _selectedRole = v ?? 'member');
                 widget.onRoleChanged(v);
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(
+                height: Responsive.spacing(context,
+                    mobile: 16, tablet: 20, desktop: 24)),
             SizedBox(
               height: 48,
               child: ElevatedButton(

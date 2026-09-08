@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,11 +41,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-              const SizedBox(height: 16),
-              Text('Gagal memuat produk', style: TextStyle(color: AppColors.onSurface)),
-              const SizedBox(height: 16),
+              SizedBox(height: Responsive.spacing(context)),
+              Text('Gagal memuat produk',
+                  style: TextStyle(color: AppColors.onSurface)),
+              SizedBox(height: Responsive.spacing(context)),
               ElevatedButton(
-                onPressed: () => ref.read(productDetailProvider.notifier).load(widget.productId),
+                onPressed: () => ref
+                    .read(productDetailProvider.notifier)
+                    .load(widget.productId),
                 child: const Text('Coba Lagi'),
               ),
             ],
@@ -63,14 +67,19 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     AspectRatio(
                       aspectRatio: 1,
                       child: PageView.builder(
-                        onPageChanged: (i) => setState(() => _selectedImageIndex = i),
+                        onPageChanged: (i) =>
+                            setState(() => _selectedImageIndex = i),
                         itemCount: product.images.length,
                         itemBuilder: (context, index) {
                           return CachedNetworkImage(
                             imageUrl: product.images[index],
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
-                            errorWidget: (_, __, ___) => const Icon(Icons.cookie, size: 64, color: AppColors.primaryLight),
+                            placeholder: (_, __) => const Center(
+                                child: CircularProgressIndicator()),
+                            errorWidget: (_, __, ___) => const Icon(
+                                Icons.cookie,
+                                size: 64,
+                                color: AppColors.primaryLight),
                           );
                         },
                       ),
@@ -79,7 +88,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     // Image indicators
                     if (product.images.length > 1)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                            vertical: Responsive.spacing(context,
+                                mobile: 10, tablet: 12, desktop: 14)),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
@@ -101,7 +112,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
                     // Product info
                     Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(Responsive.padding(context)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -113,34 +124,46 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                               color: AppColors.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(
+                              height: Responsive.spacing(context,
+                                  mobile: 6, tablet: 8, desktop: 10)),
                           Row(
                             children: [
-                              const Icon(Icons.star_rounded, size: 18, color: AppColors.ratingColor),
+                              const Icon(Icons.star_rounded,
+                                  size: 18, color: AppColors.ratingColor),
                               const SizedBox(width: 4),
                               Text(
                                 '${product.rating} (${product.reviewCount} ulasan)',
-                                style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.onSurfaceVariant),
                               ),
                               const SizedBox(width: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: product.stock > 0 ? AppColors.successContainer : AppColors.errorContainer,
+                                  color: product.stock > 0
+                                      ? AppColors.successContainer
+                                      : AppColors.errorContainer,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  product.stock > 0 ? 'Stok: ${product.stock}' : 'Habis',
+                                  product.stock > 0
+                                      ? 'Stok: ${product.stock}'
+                                      : 'Habis',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: product.stock > 0 ? AppColors.success : AppColors.error,
+                                    color: product.stock > 0
+                                        ? AppColors.success
+                                        : AppColors.error,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: Responsive.spacing(context)),
                           if (product.discountPrice != null) ...[
                             Text(
                               CurrencyFormatter.idr(product.discountPrice!),
@@ -167,7 +190,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                 color: AppColors.primary,
                               ),
                             ),
-                          const SizedBox(height: 20),
+                          SizedBox(
+                              height: Responsive.spacing(context,
+                                  mobile: 16, tablet: 18, desktop: 20)),
                           const Text(
                             'Deskripsi',
                             style: TextStyle(
@@ -176,7 +201,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                               color: AppColors.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(
+                              height: Responsive.spacing(context,
+                                  mobile: 6, tablet: 8, desktop: 10)),
                           Text(
                             product.description,
                             style: const TextStyle(
@@ -195,33 +222,41 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               // Add to cart button
               SafeArea(
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(Responsive.padding(context)),
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
-                    border: Border(top: BorderSide(color: AppColors.outlineVariant)),
+                    border: Border(
+                        top: BorderSide(color: AppColors.outlineVariant)),
                   ),
                   child: Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: product.stock > 0 ? () {
-                            ref.read(cartProvider.notifier).addItem(
-                              int.tryParse(product.id) ?? 0,
-                              product.name,
-                              product.price,
-                              image: product.images.isNotEmpty ? product.images.first : null,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${product.name} ditambahkan ke keranjang'),
-                                backgroundColor: const Color(0xFF2E7D32),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          } : null,
+                          onPressed: product.stock > 0
+                              ? () {
+                                  ref.read(cartProvider.notifier).addItem(
+                                        int.tryParse(product.id) ?? 0,
+                                        product.name,
+                                        product.price,
+                                        image: product.images.isNotEmpty
+                                            ? product.images.first
+                                            : null,
+                                      );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '${product.name} ditambahkan ke keranjang'),
+                                      backgroundColor: const Color(0xFF2E7D32),
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
+                              : null,
                           icon: const Icon(Icons.shopping_cart, size: 20),
                           label: Text(
-                            product.stock > 0 ? 'Tambah ke Keranjang' : 'Stok Habis',
+                            product.stock > 0
+                                ? 'Tambah ke Keranjang'
+                                : 'Stok Habis',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           style: ElevatedButton.styleFrom(
