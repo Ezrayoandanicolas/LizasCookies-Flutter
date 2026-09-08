@@ -105,6 +105,16 @@ class LocalStorage {
   static Future<void> removeOfflineOrder(String key) async =>
       _offlineOrdersBox.delete(key);
 
+  static Future<void> resetAllRetryCounts() async {
+    for (final key in _offlineOrdersBox.keys) {
+      final order = _offlineOrdersBox.get(key);
+      if (order is Map) {
+        order['retry_count'] = 0;
+        await _offlineOrdersBox.put(key, order);
+      }
+    }
+  }
+
   // Offline Stock
   static Box get offlineStockBox => _offlineStockBox;
 

@@ -47,6 +47,7 @@ class SyncService {
 
   Future<void> manualSync() async {
     if (_isSyncing) return;
+    await LocalStorage.resetAllRetryCounts();
     await processPendingOrders();
   }
 
