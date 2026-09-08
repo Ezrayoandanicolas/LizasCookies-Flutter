@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../data/products_provider.dart';
 import '../../../cart/data/cart_provider.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -51,14 +52,14 @@ class HomePage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 80),
                 children: [
-                  _buildWelcomeBanner(userName),
+                  _buildWelcomeBanner(context, userName),
                   if (isAdmin) ...[
-                    _buildSectionTitle('Menu'),
+                    _buildSectionTitle(context, 'Menu'),
                     _buildAdminMenu(context),
                   ],
                   _buildCategoryFilter(ref, context),
-                  _buildSectionTitle('Semua Produk'),
-                  _buildProductBody(ref),
+                  _buildSectionTitle(context, 'Semua Produk'),
+                  _buildProductBody(context, ref),
                 ],
               ),
             ),
@@ -69,10 +70,10 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeBanner(String name) {
+  Widget _buildWelcomeBanner(BuildContext context, String name) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      margin: EdgeInsets.fromLTRB(Responsive.padding(context), 8, Responsive.padding(context), 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _lightBg,
@@ -106,9 +107,9 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      padding: EdgeInsets.fromLTRB(Responsive.padding(context), 20, Responsive.padding(context), 8),
       child: Text(
         title,
         style: const TextStyle(
@@ -132,15 +133,15 @@ class HomePage extends ConsumerWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: Responsive.gridColumns(context, mobile: 3, tablet: 4, desktop: 6),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.85,
+          childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.8, tablet: 0.85, desktop: 0.9),
         ),
         itemCount: menus.length,
         itemBuilder: (context, index) {
@@ -171,7 +172,7 @@ class HomePage extends ConsumerWidget {
         if (categories.isEmpty) return const SizedBox.shrink();
         return Container(
           height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -247,10 +248,10 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildProductBody(WidgetRef ref) {
+  Widget _buildProductBody(BuildContext context, WidgetRef ref) {
     final productsAsync = ref.watch(productsProvider);
     return productsAsync.when(
-      loading: () => _buildProductShimmer(),
+      loading: () => _buildProductShimmer(context),
       error: (e, _) => SizedBox(
         height: 200,
         child: Center(
@@ -293,21 +294,21 @@ class HomePage extends ConsumerWidget {
             ),
           );
         }
-        return _buildProductGrid(ref, filtered);
+        return _buildProductGrid(context, ref, filtered);
       },
     );
   }
 
-  Widget _buildProductGrid(WidgetRef ref, List<ProductItem> products) {
+  Widget _buildProductGrid(BuildContext context, WidgetRef ref, List<ProductItem> products) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Responsive.gridColumns(context, mobile: 2, tablet: 3, desktop: 4),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.68,
+        childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.65, tablet: 0.7, desktop: 0.75),
       ),
       itemCount: products.length,
       itemBuilder: (context, index) => _buildProductCard(context, ref, products[index]),
@@ -395,16 +396,16 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildProductShimmer() {
+  Widget _buildProductShimmer(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      padding: EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Responsive.gridColumns(context, mobile: 2, tablet: 3, desktop: 4),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.68,
+        childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.65, tablet: 0.7, desktop: 0.75),
       ),
       itemCount: 6,
       itemBuilder: (_, __) => Card(

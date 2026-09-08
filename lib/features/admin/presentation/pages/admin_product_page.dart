@@ -11,6 +11,7 @@ import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/image_helper.dart';
+import '../../../../core/utils/responsive.dart';
 
 final adminProductsProvider = StateNotifierProvider<AdminProductsNotifier, AsyncValue<List<Map>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
@@ -254,11 +255,11 @@ class _AdminProductListPageState extends ConsumerState<AdminProductListPage> {
                       onNotification: _onScrollNotification,
                       child: GridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: Responsive.gridColumns(context, mobile: 2, tablet: 3, desktop: 4),
                           mainAxisSpacing: 8,
                           crossAxisSpacing: 8,
-                          childAspectRatio: 0.65,
+                          childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.65, tablet: 0.7, desktop: 0.75),
                         ),
                         itemCount: items.length + (ref.read(adminProductsProvider.notifier).hasMore ? 1 : 0),
                         itemBuilder: (context, index) {

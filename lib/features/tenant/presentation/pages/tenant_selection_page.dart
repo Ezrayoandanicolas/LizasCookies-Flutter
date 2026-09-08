@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/utils/responsive.dart';
 
 class TenantSelectionPage extends ConsumerStatefulWidget {
   const TenantSelectionPage({super.key});
 
   @override
-  ConsumerState<TenantSelectionPage> createState() => _TenantSelectionPageState();
+  ConsumerState<TenantSelectionPage> createState() =>
+      _TenantSelectionPageState();
 }
 
 class _TenantSelectionPageState extends ConsumerState<TenantSelectionPage> {
@@ -102,11 +104,13 @@ class _TenantSelectionPageState extends ConsumerState<TenantSelectionPage> {
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 32),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Pilih Tenant', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                child: const Text('Pilih Tenant',
+                    style: TextStyle(fontSize: 14, color: Colors.grey)),
               ),
             ),
             const SizedBox(height: 12),
@@ -120,7 +124,8 @@ class _TenantSelectionPageState extends ConsumerState<TenantSelectionPage> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                                const Icon(Icons.error_outline,
+                                    size: 48, color: Colors.red),
                                 const SizedBox(height: 12),
                                 Text(_error!, textAlign: TextAlign.center),
                                 const SizedBox(height: 12),
@@ -133,19 +138,49 @@ class _TenantSelectionPageState extends ConsumerState<TenantSelectionPage> {
                           ),
                         )
                       : _tenants.isEmpty
-                          ? const Center(child: Text('Tidak ada tenant tersedia'))
-                          : ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              itemCount: _tenants.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final tenant = _tenants[index];
-                                return _TenantCard(
-                                  tenant: tenant,
-                                  onTap: () => _selectTenant(tenant),
-                                );
-                              },
-                            ),
+                          ? const Center(
+                              child: Text('Tidak ada tenant tersedia'))
+                          : Responsive.isDesktop(context) ||
+                                  Responsive.isTablet(context)
+                              ? GridView.builder(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: Responsive.padding(context),
+                                    vertical: 8,
+                                  ),
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: Responsive.gridColumns(
+                                        context,
+                                        mobile: 1,
+                                        tablet: 2,
+                                        desktop: 3),
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 3.5,
+                                  ),
+                                  itemCount: _tenants.length,
+                                  itemBuilder: (context, index) {
+                                    final tenant = _tenants[index];
+                                    return _TenantCard(
+                                      tenant: tenant,
+                                      onTap: () => _selectTenant(tenant),
+                                    );
+                                  },
+                                )
+                              : ListView.separated(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: Responsive.padding(context)),
+                                  itemCount: _tenants.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 12),
+                                  itemBuilder: (context, index) {
+                                    final tenant = _tenants[index];
+                                    return _TenantCard(
+                                      tenant: tenant,
+                                      onTap: () => _selectTenant(tenant),
+                                    );
+                                  },
+                                ),
             ),
             const SizedBox(height: 24),
           ],
@@ -192,16 +227,20 @@ class _TenantCard extends StatelessWidget {
                 color: const Color(0xFFFFE8E0),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.business, color: Color(0xFFE85D3A), size: 24),
+              child: const Icon(Icons.business,
+                  color: Color(0xFFE85D3A), size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text('Slug: $slug', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                  Text('Slug: $slug',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey)),
                 ],
               ),
             ),

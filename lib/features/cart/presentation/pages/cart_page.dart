@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../data/cart_provider.dart';
 
 class CartPage extends ConsumerWidget {
@@ -18,7 +19,8 @@ class CartPage extends ConsumerWidget {
           if (!cart.isEmpty)
             TextButton(
               onPressed: () => _showClearDialog(context, ref),
-              child: const Text('Hapus Semua', style: TextStyle(color: AppColors.error)),
+              child: const Text('Hapus Semua',
+                  style: TextStyle(color: AppColors.error)),
             ),
         ],
       ),
@@ -27,11 +29,14 @@ class CartPage extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.outline),
+                  Icon(Icons.shopping_cart_outlined,
+                      size: 64, color: AppColors.outline),
                   SizedBox(height: 16),
-                  Text('Keranjang kosong', style: TextStyle(fontSize: 16, color: AppColors.outline)),
+                  Text('Keranjang kosong',
+                      style: TextStyle(fontSize: 16, color: AppColors.outline)),
                   SizedBox(height: 8),
-                  Text('Yuk mulai belanja!', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  Text('Yuk mulai belanja!',
+                      style: TextStyle(color: AppColors.onSurfaceVariant)),
                 ],
               ),
             )
@@ -39,7 +44,8 @@ class CartPage extends ConsumerWidget {
               children: [
                 Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(Responsive.padding(context,
+                        mobile: 12, tablet: 14, desktop: 16)),
                     itemCount: cart.items.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) => _buildCartItem(
@@ -52,10 +58,12 @@ class CartPage extends ConsumerWidget {
 
                 // Total & Checkout
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(Responsive.padding(context,
+                      mobile: 12, tablet: 14, desktop: 16)),
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
-                    border: Border(top: BorderSide(color: AppColors.outlineVariant)),
+                    border: Border(
+                        top: BorderSide(color: AppColors.outlineVariant)),
                   ),
                   child: SafeArea(
                     child: Column(
@@ -64,7 +72,9 @@ class CartPage extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Subtotal', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                            const Text('Subtotal',
+                                style: TextStyle(
+                                    color: AppColors.onSurfaceVariant)),
                             Text(
                               'Rp ${cart.subtotal.toInt()}',
                               style: const TextStyle(
@@ -80,7 +90,8 @@ class CartPage extends ConsumerWidget {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {},
-                            child: const Text('Checkout', style: TextStyle(fontWeight: FontWeight.w600)),
+                            child: const Text('Checkout',
+                                style: TextStyle(fontWeight: FontWeight.w600)),
                           ),
                         ),
                       ],
@@ -106,7 +117,9 @@ class CartPage extends ConsumerWidget {
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       onDismissed: (_) {
-        ref.read(cartProvider.notifier).removeItem(item.productId, variant: item.variant);
+        ref
+            .read(cartProvider.notifier)
+            .removeItem(item.productId, variant: item.variant);
       },
       child: Card(
         margin: EdgeInsets.zero,
@@ -123,7 +136,8 @@ class CartPage extends ConsumerWidget {
                       ? CachedNetworkImage(
                           imageUrl: item.image!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(Icons.cookie, color: AppColors.primaryLight),
+                          errorWidget: (_, __, ___) => const Icon(Icons.cookie,
+                              color: AppColors.primaryLight),
                         )
                       : const Icon(Icons.cookie, color: AppColors.primaryLight),
                 ),
@@ -135,7 +149,8 @@ class CartPage extends ConsumerWidget {
                   children: [
                     Text(
                       item.name,
-                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 14),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -143,7 +158,8 @@ class CartPage extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         item.variant!,
-                        style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant),
                       ),
                     ],
                     const SizedBox(height: 6),
@@ -168,29 +184,34 @@ class CartPage extends ConsumerWidget {
                   children: [
                     IconButton(
                       onPressed: item.quantity > 1
-                          ? () => ref.read(cartProvider.notifier).updateQuantity(
-                                item.productId,
-                                item.quantity - 1,
-                                variant: item.variant,
-                              )
+                          ? () =>
+                              ref.read(cartProvider.notifier).updateQuantity(
+                                    item.productId,
+                                    item.quantity - 1,
+                                    variant: item.variant,
+                                  )
                           : null,
                       icon: const Icon(Icons.remove, size: 18),
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
                     ),
                     Text(
                       '${item.quantity}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     IconButton(
                       onPressed: item.quantity < item.maxStock
-                          ? () => ref.read(cartProvider.notifier).updateQuantity(
-                                item.productId,
-                                item.quantity + 1,
-                                variant: item.variant,
-                              )
+                          ? () =>
+                              ref.read(cartProvider.notifier).updateQuantity(
+                                    item.productId,
+                                    item.quantity + 1,
+                                    variant: item.variant,
+                                  )
                           : null,
                       icon: const Icon(Icons.add, size: 18),
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
                     ),
                   ],
                 ),
@@ -209,13 +230,15 @@ class CartPage extends ConsumerWidget {
         title: const Text('Hapus Semua?'),
         content: const Text('Semua item akan dihapus dari keranjang.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           TextButton(
             onPressed: () {
               ref.read(cartProvider.notifier).clear();
               Navigator.pop(ctx);
             },
-            child: const Text('Hapus', style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Hapus', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

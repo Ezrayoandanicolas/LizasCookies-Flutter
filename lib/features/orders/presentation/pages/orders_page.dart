@@ -10,6 +10,7 @@ import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/storage/local_storage.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/domain/entities/auth_entity.dart';
 import '../../../cart/data/cart_provider.dart';
@@ -27,7 +28,11 @@ class OrderItem {
   final int quantity;
   final double price;
 
-  const OrderItem({this.productId, required this.name, required this.quantity, required this.price});
+  const OrderItem(
+      {this.productId,
+      required this.name,
+      required this.quantity,
+      required this.price});
   double get total => price * quantity;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -37,7 +42,11 @@ class OrderItem {
     } else {
       name = (json['product_name'] ?? json['name'] ?? '-').toString();
     }
-    final pid = json['product_id'] != null ? (json['product_id'] is int ? json['product_id'] as int : int.tryParse(json['product_id'].toString())) : null;
+    final pid = json['product_id'] != null
+        ? (json['product_id'] is int
+            ? json['product_id'] as int
+            : int.tryParse(json['product_id'].toString()))
+        : null;
     return OrderItem(
       productId: pid,
       name: name,
@@ -47,11 +56,11 @@ class OrderItem {
   }
 
   Map<String, dynamic> toJson() => {
-    'product_id': productId,
-    'product_name': name,
-    'quantity': quantity,
-    'price': price,
-  };
+        'product_id': productId,
+        'product_name': name,
+        'quantity': quantity,
+        'price': price,
+      };
 }
 
 class OrderData {
@@ -83,7 +92,8 @@ class OrderData {
     this.isOffline = false,
   });
 
-  String get orderNumber => id != null ? '#$id' : '#OFFLINE-${(localId ?? '').substring(0, 8)}';
+  String get orderNumber =>
+      id != null ? '#$id' : '#OFFLINE-${(localId ?? '').substring(0, 8)}';
   double get finalTotal => totalAmount - discountAmount;
 
   String get itemsSummary {
@@ -98,40 +108,51 @@ class OrderData {
     final itemsList = <OrderItem>[];
     if (json['items'] is List) {
       itemsList.addAll(
-        (json['items'] as List).map((e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
+        (json['items'] as List).map(
+            (e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
       );
     }
 
     return OrderData(
-      id: json['id'] != null ? (json['id'] is int ? json['id'] as int : int.tryParse(json['id'].toString())) : null,
+      id: json['id'] != null
+          ? (json['id'] is int
+              ? json['id'] as int
+              : int.tryParse(json['id'].toString()))
+          : null,
       localId: json['local_id']?.toString(),
       status: (json['status'] ?? 'pending').toString().toLowerCase(),
-      totalAmount: double.tryParse((json['total_amount'] ?? json['total'] ?? 0).toString()) ?? 0,
-      discountAmount: double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
+      totalAmount: double.tryParse(
+              (json['total_amount'] ?? json['total'] ?? 0).toString()) ??
+          0,
+      discountAmount:
+          double.tryParse((json['discount_amount'] ?? 0).toString()) ?? 0,
       paymentMethod: (json['payment_method'] ?? '-').toString(),
       orderSource: (json['order_source'] ?? '-').toString(),
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
       items: itemsList,
       notes: json['notes']?.toString(),
-      storeName: json['store'] is Map ? json['store']['name']?.toString() : null,
+      storeName:
+          json['store'] is Map ? json['store']['name']?.toString() : null,
       isOffline: json['is_offline'] == true,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'local_id': localId,
-    'status': status,
-    'total_amount': totalAmount,
-    'discount_amount': discountAmount,
-    'payment_method': paymentMethod,
-    'order_source': orderSource,
-    'created_at': createdAt?.toIso8601String(),
-    'items': items.map((e) => e.toJson()).toList(),
-    'notes': notes,
-    'store_name': storeName,
-    'is_offline': isOffline,
-  };
+        'id': id,
+        'local_id': localId,
+        'status': status,
+        'total_amount': totalAmount,
+        'discount_amount': discountAmount,
+        'payment_method': paymentMethod,
+        'order_source': orderSource,
+        'created_at': createdAt?.toIso8601String(),
+        'items': items.map((e) => e.toJson()).toList(),
+        'notes': notes,
+        'store_name': storeName,
+        'is_offline': isOffline,
+      };
 }
 
 class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
@@ -156,7 +177,9 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
 
   List<OrderData> _getLocalOrders() {
     final raw = LocalStorage.getAllLocalOrders();
-    return raw.map((e) => OrderData.fromJson(Map<String, dynamic>.from(e))).toList();
+    return raw
+        .map((e) => OrderData.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   List<OrderData> _getOfflineQueueOrders() {
@@ -166,16 +189,21 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
       final itemsList = <OrderItem>[];
       if (body['items'] is List) {
         itemsList.addAll(
-          (body['items'] as List).map((e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
+          (body['items'] as List).map(
+              (e) => OrderItem.fromJson(Map<String, dynamic>.from(e as Map))),
         );
       }
       return OrderData(
         localId: o['id']?.toString(),
         status: (body['status'] as String?) ?? 'pending_sync',
-        totalAmount: double.tryParse((body['total'] ?? body['grand_total'] ?? 0).toString()) ?? 0,
+        totalAmount: double.tryParse(
+                (body['total'] ?? body['grand_total'] ?? 0).toString()) ??
+            0,
         paymentMethod: (body['payment_method'] ?? '-').toString(),
         orderSource: 'POS Offline',
-        createdAt: o['created_at'] != null ? DateTime.tryParse(o['created_at'].toString()) : null,
+        createdAt: o['created_at'] != null
+            ? DateTime.tryParse(o['created_at'].toString())
+            : null,
         items: itemsList,
         isOffline: true,
       );
@@ -215,11 +243,14 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
         list = [];
       }
       _hasMore = list.length >= 50;
-      final onlineOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
+      final onlineOrders = list
+          .map((e) => OrderData.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       for (final order in onlineOrders) {
         if (order.id != null) {
-          await LocalStorage.saveLocalOrder('order_${order.id}', order.toJson());
+          await LocalStorage.saveLocalOrder(
+              'order_${order.id}', order.toJson());
         }
       }
 
@@ -234,7 +265,11 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
     _isLoadingMore = true;
     _page++;
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 50};
+      final params = <String, dynamic>{
+        ..._tenantQp,
+        'page': _page,
+        'per_page': 50
+      };
       final res = await _dio.get('/superadmin/orders', queryParameters: params);
       final data = res.data;
       List list;
@@ -246,10 +281,13 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
         list = [];
       }
       _hasMore = list.length >= 50;
-      final newOrders = list.map((e) => OrderData.fromJson(e as Map<String, dynamic>)).toList();
+      final newOrders = list
+          .map((e) => OrderData.fromJson(e as Map<String, dynamic>))
+          .toList();
       for (final order in newOrders) {
         if (order.id != null) {
-          await LocalStorage.saveLocalOrder('order_${order.id}', order.toJson());
+          await LocalStorage.saveLocalOrder(
+              'order_${order.id}', order.toJson());
         }
       }
       final mergedLocal = _getLocalOrders();
@@ -300,7 +338,8 @@ class OrdersNotifier extends StateNotifier<AsyncValue<List<OrderData>>> {
   }
 }
 
-final ordersProvider = StateNotifierProvider<OrdersNotifier, AsyncValue<List<OrderData>>>((ref) {
+final ordersProvider =
+    StateNotifierProvider<OrdersNotifier, AsyncValue<List<OrderData>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
   return OrdersNotifier(dio);
 });
@@ -311,7 +350,8 @@ class OrdersPage extends ConsumerStatefulWidget {
   ConsumerState<OrdersPage> createState() => _OrdersPageState();
 }
 
-class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProviderStateMixin {
+class _OrdersPageState extends ConsumerState<OrdersPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _apiLoaded = false;
   String _dateFilter = 'all'; // all, today, 7d, 30d, 3m
@@ -357,11 +397,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
   Widget _buildDateFilterChip(String label, String value) {
     final selected = _dateFilter == value;
     return FilterChip(
-      label: Text(label, style: TextStyle(
-        fontSize: 12,
-        color: selected ? Colors.white : Colors.grey.shade700,
-        fontWeight: FontWeight.w500,
-      )),
+      label: Text(label,
+          style: TextStyle(
+            fontSize: 12,
+            color: selected ? Colors.white : Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
+          )),
       selected: selected,
       onSelected: (_) => setState(() => _dateFilter = value),
       selectedColor: Theme.of(context).colorScheme.primary,
@@ -374,7 +415,8 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
 
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollEndNotification &&
-        notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+        notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 200) {
       ref.read(ordersProvider.notifier).loadMore();
     }
     return false;
@@ -384,25 +426,39 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
 
   Color _statusColor(String s) {
     switch (s) {
-      case 'pending': return Colors.orange;
-      case 'paid': return Colors.orange;
-      case 'pending_sync': return Colors.orange;
-      case 'processing': return Colors.blue;
-      case 'completed': return Colors.green;
-      case 'cancelled': return Colors.red;
-      default: return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'paid':
+        return Colors.orange;
+      case 'pending_sync':
+        return Colors.orange;
+      case 'processing':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
   String _statusLabel(String s) {
     switch (s) {
-      case 'pending': return 'Menunggu';
-      case 'paid': return 'Dibayar';
-      case 'pending_sync': return 'Menunggu Sync';
-      case 'processing': return 'Diproses';
-      case 'completed': return 'Selesai';
-      case 'cancelled': return 'Dibatalkan';
-      default: return s.toUpperCase();
+      case 'pending':
+        return 'Menunggu';
+      case 'paid':
+        return 'Dibayar';
+      case 'pending_sync':
+        return 'Menunggu Sync';
+      case 'processing':
+        return 'Diproses';
+      case 'completed':
+        return 'Selesai';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return s.toUpperCase();
     }
   }
 
@@ -443,7 +499,8 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 12),
-              Text('Gagal memuat pesanan', style: TextStyle(color: Colors.grey.shade600)),
+              Text('Gagal memuat pesanan',
+                  style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () => ref.read(ordersProvider.notifier).load(),
@@ -454,16 +511,28 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
         ),
         data: (orders) {
           final filtered = _filterByDate(orders);
-          final processed = filtered.where((o) => o.status == 'pending' || o.status == 'paid' || o.status == 'pending_sync' || o.status == 'processing').toList();
-          final completed = filtered.where((o) => o.status == 'completed').toList();
-          final cancelled = filtered.where((o) => o.status == 'cancelled').toList();
+          final processed = filtered
+              .where((o) =>
+                  o.status == 'pending' ||
+                  o.status == 'paid' ||
+                  o.status == 'pending_sync' ||
+                  o.status == 'processing')
+              .toList();
+          final completed =
+              filtered.where((o) => o.status == 'completed').toList();
+          final cancelled =
+              filtered.where((o) => o.status == 'cancelled').toList();
 
           final lists = [filtered, processed, completed, cancelled];
 
           return Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.padding(context,
+                      mobile: 12, tablet: 14, desktop: 16),
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     _buildDateFilterChip('Semua', 'all'),
@@ -480,46 +549,58 @@ class _OrdersPageState extends ConsumerState<OrdersPage> with SingleTickerProvid
               ),
               Expanded(
                 child: TabBarView(
-            controller: _tabController,
-            children: lists.map((list) {
-              if (list.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('Belum ada pesanan', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
-                    ],
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () => ref.read(ordersProvider.notifier).load(),
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _onScrollNotification,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    itemCount: list.length + (ref.watch(ordersProvider).valueOrNull != null && ref.read(ordersProvider.notifier).hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == list.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      return _OrderCard(
-                        order: list[index],
-                        fmt: _fmt,
-                        statusColor: _statusColor,
-                        statusLabel: _statusLabel,
+                  controller: _tabController,
+                  children: lists.map((list) {
+                    if (list.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.receipt_long,
+                                size: 64, color: Colors.grey.shade300),
+                            const SizedBox(height: 12),
+                            Text('Belum ada pesanan',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.grey.shade500)),
+                          ],
+                        ),
                       );
-                    },
-                  ),
+                    }
+                    return RefreshIndicator(
+                      onRefresh: () => ref.read(ordersProvider.notifier).load(),
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: _onScrollNotification,
+                        child: ListView.builder(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: Responsive.padding(context,
+                                mobile: 12, tablet: 14, desktop: 16),
+                          ),
+                          itemCount: list.length +
+                              (ref.watch(ordersProvider).valueOrNull != null &&
+                                      ref.read(ordersProvider.notifier).hasMore
+                                  ? 1
+                                  : 0),
+                          itemBuilder: (context, index) {
+                            if (index == list.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            return _OrderCard(
+                              order: list[index],
+                              fmt: _fmt,
+                              statusColor: _statusColor,
+                              statusLabel: _statusLabel,
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
-          ),
               ),
             ],
           );
@@ -552,27 +633,34 @@ class _OrderCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showDetail(context, ref),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(
+              Responsive.padding(context, mobile: 12, tablet: 14, desktop: 16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Text(order.orderNumber,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
                   if (order.isOffline) ...[
                     const SizedBox(width: 6),
-                    Icon(Icons.cloud_off, size: 14, color: Colors.orange.shade600),
+                    Icon(Icons.cloud_off,
+                        size: 14, color: Colors.orange.shade600),
                   ],
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(statusLabel(order.status),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: color)),
                   ),
                 ],
               ),
@@ -585,7 +673,9 @@ class _OrderCard extends ConsumerWidget {
                   children: [
                     const Icon(Icons.store, size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(order.storeName!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(order.storeName!,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ],
@@ -598,16 +688,23 @@ class _OrderCard extends ConsumerWidget {
               Row(
                 children: [
                   Text(fmt(order.finalTotal),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: theme.colorScheme.primary)),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary)),
                   const Spacer(),
                   Text(order.paymentMethod.toUpperCase(),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500)),
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: () => _reorder(context, ref),
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
@@ -615,9 +712,14 @@ class _OrderCard extends ConsumerWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.replay, size: 14, color: theme.colorScheme.primary),
+                          Icon(Icons.replay,
+                              size: 14, color: theme.colorScheme.primary),
                           const SizedBox(width: 4),
-                          Text('Reorder', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
+                          Text('Reorder',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.primary)),
                         ],
                       ),
                     ),
@@ -634,7 +736,9 @@ class _OrderCard extends ConsumerWidget {
   void _reorder(BuildContext context, WidgetRef ref) {
     if (order.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada item untuk di-reorder'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('Tidak ada item untuk di-reorder'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
@@ -642,11 +746,14 @@ class _OrderCard extends ConsumerWidget {
     int added = 0;
     for (final item in order.items) {
       if (item.productId == null) continue;
-      cart.addItem(item.productId!, item.name, item.price, quantity: item.quantity);
+      cart.addItem(item.productId!, item.name, item.price,
+          quantity: item.quantity);
       added++;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$added item ditambahkan ke keranjang'), backgroundColor: Colors.green),
+      SnackBar(
+          content: Text('$added item ditambahkan ke keranjang'),
+          backgroundColor: Colors.green),
     );
     context.push('/pos');
   }
@@ -678,9 +785,11 @@ class _OrderCard extends ConsumerWidget {
               _row('Pembayaran', order.paymentMethod.toUpperCase()),
               _row('Sumber', order.orderSource),
               if (order.storeName != null) _row('Toko', order.storeName!),
-              if (order.discountAmount > 0) _row('Diskon', fmt(order.discountAmount)),
+              if (order.discountAmount > 0)
+                _row('Diskon', fmt(order.discountAmount)),
               const Divider(height: 24),
-              const Text('Item:', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Item:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               if (order.items.isEmpty)
                 const Text('Tidak ada item')
@@ -689,8 +798,11 @@ class _OrderCard extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
-                          Expanded(child: Text('${item.name} x${item.quantity}', style: const TextStyle(fontSize: 13))),
-                          Text(fmt(item.total), style: const TextStyle(fontSize: 13)),
+                          Expanded(
+                              child: Text('${item.name} x${item.quantity}',
+                                  style: const TextStyle(fontSize: 13))),
+                          Text(fmt(item.total),
+                              style: const TextStyle(fontSize: 13)),
                         ],
                       ),
                     )),
@@ -698,14 +810,20 @@ class _OrderCard extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const Text('Total',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   Text(fmt(order.finalTotal),
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: theme.colorScheme.primary)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: theme.colorScheme.primary)),
                 ],
               ),
               if (order.notes != null && order.notes!.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Catatan: ${order.notes}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                Text('Catatan: ${order.notes}',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey)),
               ],
             ],
           ),
@@ -717,12 +835,17 @@ class _OrderCard extends ConsumerWidget {
               child: const Text('Tutup'),
             ),
             FilledButton(
-              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'cancelled', 'Dibatalkan') : null,
-              style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.error),
+              onPressed: isOnline
+                  ? () => _updateStatus(ctx, ref, 'cancelled', 'Dibatalkan')
+                  : null,
+              style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error),
               child: const Text('Tolak'),
             ),
             FilledButton(
-              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'processing', 'Diproses') : null,
+              onPressed: isOnline
+                  ? () => _updateStatus(ctx, ref, 'processing', 'Diproses')
+                  : null,
               child: const Text('Proses'),
             ),
           ] else if (order.status == 'processing') ...[
@@ -731,28 +854,37 @@ class _OrderCard extends ConsumerWidget {
               child: const Text('Tutup'),
             ),
             FilledButton(
-              onPressed: isOnline ? () => _updateStatus(ctx, ref, 'completed', 'Selesai') : null,
+              onPressed: isOnline
+                  ? () => _updateStatus(ctx, ref, 'completed', 'Selesai')
+                  : null,
               child: const Text('Selesai'),
             ),
           ] else ...[
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Tutup')),
           ],
         ],
       ),
     );
   }
 
-  Future<void> _updateStatus(BuildContext context, WidgetRef ref, String status, String label) async {
+  Future<void> _updateStatus(
+      BuildContext context, WidgetRef ref, String status, String label) async {
     if (order.id == null) return;
     try {
-      await ref.read(ordersProvider.notifier).updateOrderStatus(order.id!, status);
+      await ref
+          .read(ordersProvider.notifier)
+          .updateOrderStatus(order.id!, status);
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan $label')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Pesanan $label')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Gagal: $e')));
       }
     }
   }
@@ -764,7 +896,9 @@ class _OrderCard extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Flexible(
+              child: Text(value,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );

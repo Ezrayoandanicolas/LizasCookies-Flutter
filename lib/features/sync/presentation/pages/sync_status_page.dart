@@ -5,6 +5,7 @@ import '../../../../core/sync/sync_service.dart';
 import '../../../../core/sync/sync_history_item.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../../../../core/network/connectivity_provider.dart';
+import '../../../../core/utils/responsive.dart';
 
 class SyncStatusPage extends ConsumerStatefulWidget {
   const SyncStatusPage({super.key});
@@ -47,9 +48,11 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
       body: Column(
         children: [
           _buildLiveStatusCard(theme, isOnline, syncService),
-          if (_currentSyncState.syncing && _currentSyncState.currentDescription != null)
+          if (_currentSyncState.syncing &&
+              _currentSyncState.currentDescription != null)
             _buildProgressCard(theme),
-          if (_currentSyncState.syncedCount != null || _currentSyncState.failedCount != null)
+          if (_currentSyncState.syncedCount != null ||
+              _currentSyncState.failedCount != null)
             _buildResultBanner(theme),
           const Divider(height: 1),
           Expanded(
@@ -62,10 +65,12 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
     );
   }
 
-  Widget _buildLiveStatusCard(ThemeData theme, bool isOnline, SyncService syncService) {
+  Widget _buildLiveStatusCard(
+      ThemeData theme, bool isOnline, SyncService syncService) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(
+          Responsive.padding(context, mobile: 12, tablet: 16, desktop: 20)),
       color: theme.colorScheme.surfaceContainerLow,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +124,8 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.padding(context), vertical: 12),
       color: theme.colorScheme.primaryContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,14 +179,16 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(
+          horizontal: Responsive.padding(context), vertical: 10),
       color: isAllSuccess ? Colors.green.shade50 : Colors.orange.shade50,
       child: Row(
         children: [
           Icon(
             isAllSuccess ? Icons.check_circle : Icons.warning_amber,
             size: 18,
-            color: isAllSuccess ? Colors.green.shade700 : Colors.orange.shade700,
+            color:
+                isAllSuccess ? Colors.green.shade700 : Colors.orange.shade700,
           ),
           const SizedBox(width: 10),
           Text(
@@ -188,7 +196,8 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: isAllSuccess ? Colors.green.shade700 : Colors.orange.shade700,
+              color:
+                  isAllSuccess ? Colors.green.shade700 : Colors.orange.shade700,
             ),
           ),
         ],
@@ -226,12 +235,15 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(
+          vertical:
+              Responsive.spacing(context, mobile: 4, tablet: 8, desktop: 12)),
       itemCount: history.length,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
       itemBuilder: (context, index) {
         final item = history[index];
-        final timeStr = dateFormat.format(item.timestamp.toUtc().add(const Duration(hours: 7)));
+        final timeStr = dateFormat
+            .format(item.timestamp.toUtc().add(const Duration(hours: 7)));
 
         return _SyncHistoryTile(
           item: item,
@@ -247,9 +259,11 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Riwayat'),
-        content: const Text('Yakin ingin menghapus semua riwayat sinkronisasi?'),
+        content:
+            const Text('Yakin ingin menghapus semua riwayat sinkronisasi?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           TextButton(
             onPressed: () async {
               await LocalStorage.clearSyncHistory();
@@ -306,7 +320,8 @@ class _SyncHistoryTile extends StatelessWidget {
           const SizedBox(height: 2),
           Row(
             children: [
-              Icon(Icons.access_time, size: 12, color: theme.colorScheme.outline),
+              Icon(Icons.access_time,
+                  size: 12, color: theme.colorScheme.outline),
               const SizedBox(width: 4),
               Text(
                 '$timeStr WIB',
@@ -347,7 +362,8 @@ class _SyncHistoryTile extends StatelessWidget {
         ],
       ),
       isThreeLine: item.error != null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(
+          horizontal: Responsive.padding(context), vertical: 4),
     );
   }
 

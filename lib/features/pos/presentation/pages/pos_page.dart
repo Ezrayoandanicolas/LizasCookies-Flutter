@@ -7,6 +7,7 @@ import '../../../catalog/data/products_provider.dart';
 import '../../../cart/data/cart_provider.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/providers/store_provider.dart';
 import '../../../../core/providers/tenant_provider.dart';
@@ -109,7 +110,7 @@ class _POSPageState extends ConsumerState<POSPage> {
               children: [
                 Container(
                   color: theme.colorScheme.surface,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  padding: EdgeInsets.fromLTRB(Responsive.padding(context), 10, Responsive.padding(context), 10),
                   child: TextField(
                     controller: _searchController,
                     onChanged: _onSearch,
@@ -174,12 +175,12 @@ class _POSPageState extends ConsumerState<POSPage> {
                         );
                       }
                       return GridView.builder(
-                        padding: const EdgeInsets.all(8),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          childAspectRatio: 0.55,
+                        padding: EdgeInsets.all(Responsive.padding(context, mobile: 6, tablet: 8, desktop: 10)),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: Responsive.gridColumns(context, mobile: 2, tablet: 3, desktop: 4),
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                          childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.55, tablet: 0.6, desktop: 0.65),
                         ),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) =>
@@ -333,7 +334,7 @@ class _POSProductPanelState extends ConsumerState<_POSProductPanel> {
       children: [
         Container(
           color: theme.colorScheme.surface,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: EdgeInsets.fromLTRB(Responsive.padding(context, mobile: 8, tablet: 10, desktop: 12), 6, Responsive.padding(context, mobile: 8, tablet: 10, desktop: 12), 6),
           child: TextField(
             controller: widget.searchController,
             onChanged: widget.onSearch,
@@ -389,12 +390,12 @@ class _POSProductPanelState extends ConsumerState<_POSProductPanel> {
                 );
               }
               return GridView.builder(
-                padding: const EdgeInsets.all(8),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
+                padding: EdgeInsets.all(Responsive.padding(context, mobile: 6, tablet: 8, desktop: 10)),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: Responsive.gridColumns(context, mobile: 3, tablet: 4, desktop: 6),
                   mainAxisSpacing: 6,
                   crossAxisSpacing: 6,
-                  childAspectRatio: 0.55,
+                  childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.55, tablet: 0.6, desktop: 0.65),
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) => _ProductCard(product: filtered[index]),

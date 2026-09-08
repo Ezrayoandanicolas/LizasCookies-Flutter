@@ -8,8 +8,7 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../../../../core/utils/currency_formatter.dart';
-
-
+import '../../../../core/utils/responsive.dart';
 
 class CheckoutSheet extends ConsumerStatefulWidget {
   final bool isPage;
@@ -102,8 +101,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         'payment_method': _paymentMethod.toLowerCase().replaceAll(' ', '_'),
         'order_source': 'direct',
         'status': overrideStatus ?? _orderStatus,
-        'notes': _notesController.text.isNotEmpty ? _notesController.text : null,
-        'order_date': '${_orderDate.year}-${_orderDate.month.toString().padLeft(2, '0')}-${_orderDate.day.toString().padLeft(2, '0')}',
+        'notes':
+            _notesController.text.isNotEmpty ? _notesController.text : null,
+        'order_date':
+            '${_orderDate.year}-${_orderDate.month.toString().padLeft(2, '0')}-${_orderDate.day.toString().padLeft(2, '0')}',
       };
 
       if (_paymentMethod == 'Tunai') {
@@ -118,7 +119,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
         // Save to local orders
         final resData = res.data;
-        final orderId = resData is Map ? (resData['data']?['id'] ?? resData['order_id']) : null;
+        final orderId = resData is Map
+            ? (resData['data']?['id'] ?? resData['order_id'])
+            : null;
         if (orderId != null) {
           final localOrder = {
             'id': orderId,
@@ -231,26 +234,34 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  Responsive.padding(context),
+                  16,
+                  Responsive.padding(context),
+                  12,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Checkout',
                     style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                        fontSize: Responsive.fontSize(context,
+                            mobile: 18, tablet: 18, desktop: 20),
+                        fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.padding(context)),
                   children: [
                     _buildItemSection(cart),
-                    const SizedBox(height: 20),
+                    SizedBox(height: Responsive.spacing(context)),
                     _buildSummarySection(),
-                    const SizedBox(height: 20),
+                    SizedBox(height: Responsive.spacing(context)),
                     _buildPaymentSection(),
                     if (_paymentMethod == 'Tunai') ...[
                       const SizedBox(height: 16),
@@ -279,8 +290,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       children: [
         Text(
           'Item (${cart.itemCount})',
-          style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         ...cart.items.map((item) => Padding(
@@ -288,7 +298,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -315,15 +326,22 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                       children: [
                         IconButton(
                           icon: Icon(
-                            item.quantity <= 1 ? Icons.delete_outline : Icons.remove_circle_outline,
+                            item.quantity <= 1
+                                ? Icons.delete_outline
+                                : Icons.remove_circle_outline,
                             size: 22,
-                            color: item.quantity <= 1 ? theme.colorScheme.error : theme.colorScheme.primary,
+                            color: item.quantity <= 1
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.primary,
                           ),
                           onPressed: () {
                             if (item.quantity <= 1) {
-                              ref.read(cartProvider.notifier).removeItem(item.productId);
+                              ref
+                                  .read(cartProvider.notifier)
+                                  .removeItem(item.productId);
                             } else {
-                              ref.read(cartProvider.notifier).updateQuantity(item.productId, item.quantity - 1);
+                              ref.read(cartProvider.notifier).updateQuantity(
+                                  item.productId, item.quantity - 1);
                             }
                           },
                           padding: EdgeInsets.zero,
@@ -333,7 +351,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             '${item.quantity}',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                         ),
                         IconButton(
@@ -343,7 +362,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                             color: theme.colorScheme.primary,
                           ),
                           onPressed: () {
-                            ref.read(cartProvider.notifier).updateQuantity(item.productId, item.quantity + 1);
+                            ref.read(cartProvider.notifier).updateQuantity(
+                                item.productId, item.quantity + 1);
                           },
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -424,7 +444,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           style: TextStyle(
             fontSize: bold ? 15 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-            color: bold ? Theme.of(context).colorScheme.primary : Colors.grey[700],
+            color:
+                bold ? Theme.of(context).colorScheme.primary : Colors.grey[700],
           ),
         ),
         Text(
@@ -432,7 +453,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           style: TextStyle(
             fontSize: bold ? 16 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-            color: bold ? Theme.of(context).colorScheme.primary : Colors.black87,
+            color:
+                bold ? Theme.of(context).colorScheme.primary : Colors.black87,
           ),
         ),
       ],
@@ -460,10 +482,14 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Colors.white,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primaryContainer
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[300]!,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[300]!,
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
@@ -472,7 +498,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   children: [
                     Icon(icon,
                         size: 18,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[600]),
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[600]),
                     const SizedBox(width: 6),
                     Text(
                       method,
@@ -480,7 +508,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                         fontSize: 13,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[700],
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[700],
                       ),
                     ),
                   ],
@@ -542,12 +572,13 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                 onPressed: () {
                   final total = _grandTotal.toInt();
                   final formatted = total.toString().replaceAllMapped(
-                    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                    (m) => '${m[1]}.',
-                  );
+                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                        (m) => '${m[1]}.',
+                      );
                   _amountController.value = TextEditingValue(
                     text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
+                    selection:
+                        TextSelection.collapsed(offset: formatted.length),
                   );
                   setState(() {});
                 },
@@ -562,8 +593,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               ),
             ),
           ),
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         if (_amountPaid > 0) ...[
           const SizedBox(height: 10),
@@ -612,12 +642,16 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   Widget _buildDateSection() {
     final theme = Theme.of(context);
     final now = DateTime.now();
-    final isToday = _orderDate.year == now.year && _orderDate.month == now.month && _orderDate.day == now.day;
-    final dateStr = '${_orderDate.day.toString().padLeft(2, '0')}/${_orderDate.month.toString().padLeft(2, '0')}/${_orderDate.year}';
+    final isToday = _orderDate.year == now.year &&
+        _orderDate.month == now.month &&
+        _orderDate.day == now.day;
+    final dateStr =
+        '${_orderDate.day.toString().padLeft(2, '0')}/${_orderDate.month.toString().padLeft(2, '0')}/${_orderDate.year}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Tanggal Order', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        const Text('Tanggal Order',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -638,20 +672,31 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today, size: 18, color: theme.colorScheme.primary),
+                Icon(Icons.calendar_today,
+                    size: 18, color: theme.colorScheme.primary),
                 const SizedBox(width: 10),
-                Text(dateStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(dateStr,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500)),
                 const Spacer(),
                 if (!isToday)
                   TextButton(
                     onPressed: () => setState(() => _orderDate = now),
-                    child: const Text('Hari Ini', style: TextStyle(fontSize: 12)),
+                    child:
+                        const Text('Hari Ini', style: TextStyle(fontSize: 12)),
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                    child: const Text('Hari Ini', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: const Text('Hari Ini',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600)),
                   ),
               ],
             ),
@@ -693,7 +738,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         (_paymentMethod != 'Tunai' || _amountPaid >= _grandTotal);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      padding: EdgeInsets.fromLTRB(
+          Responsive.padding(context), 12, Responsive.padding(context), 20),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -730,7 +776,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 50,
+                    height: Responsive.spacing(context,
+                        mobile: 48, tablet: 50, desktop: 52),
                     child: ElevatedButton(
                       onPressed: canPay && !_processing
                           ? () => _processPayment(overrideStatus: 'processing')
@@ -752,25 +799,28 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Bayar & Proses',
                               style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700),
+                                  fontSize: Responsive.fontSize(context),
+                                  fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: Responsive.spacing(context)),
                 Expanded(
                   child: SizedBox(
-                    height: 50,
+                    height: Responsive.spacing(context,
+                        mobile: 48, tablet: 50, desktop: 52),
                     child: ElevatedButton(
                       onPressed: canPay && !_processing
                           ? () => _processPayment(overrideStatus: 'completed')
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                         disabledBackgroundColor: Colors.grey[300],
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -785,10 +835,11 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                                 color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Bayar & Selesai',
                               style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700),
+                                  fontSize: Responsive.fontSize(context),
+                                  fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),

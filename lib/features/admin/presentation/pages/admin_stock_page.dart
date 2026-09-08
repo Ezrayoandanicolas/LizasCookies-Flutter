@@ -10,6 +10,7 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/providers/store_provider.dart';
 import '../../../../core/utils/image_helper.dart';
+import '../../../../core/utils/responsive.dart';
 import 'admin_product_page.dart';
 
 class StockPage extends ConsumerStatefulWidget {
@@ -193,11 +194,11 @@ class _StockPageState extends ConsumerState<StockPage> {
                 return GridView.builder(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: Responsive.gridColumns(context, mobile: 2, tablet: 3, desktop: 4),
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 0.8,
+                    childAspectRatio: Responsive.cardAspectRatio(context, mobile: 0.75, tablet: 0.8, desktop: 0.85),
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {

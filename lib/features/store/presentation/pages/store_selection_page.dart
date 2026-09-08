@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/domain/entities/auth_entity.dart';
 
@@ -38,7 +39,8 @@ class StoreSelectionPage extends ConsumerWidget {
           children: [
             const SizedBox(height: 20),
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: const Color(0xFFE85D3A),
                 borderRadius: BorderRadius.circular(20),
@@ -53,33 +55,63 @@ class StoreSelectionPage extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               user.role?.toUpperCase() ?? '',
-              style: const TextStyle(fontSize: 12, color: Colors.grey, letterSpacing: 1),
+              style: const TextStyle(
+                  fontSize: 12, color: Colors.grey, letterSpacing: 1),
             ),
             const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: Responsive.padding(context)),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Pilih toko yang ingin dikelola:', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                child: const Text('Pilih toko yang ingin dikelola:',
+                    style: TextStyle(fontSize: 14, color: Colors.grey)),
               ),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: stores.isEmpty
                   ? const Center(child: Text('Tidak ada toko tersedia'))
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: stores.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final store = stores[index];
-                        return _StoreCard(
-                          store: store,
-                          isDefault: store.id == user.defaultStore?.id,
-                          onTap: () => _selectStore(context, ref, store),
-                        );
-                      },
-                    ),
+                  : Responsive.isDesktop(context) ||
+                          Responsive.isTablet(context)
+                      ? GridView.builder(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Responsive.padding(context),
+                            vertical: 8,
+                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Responsive.gridColumns(context,
+                                mobile: 1, tablet: 2, desktop: 3),
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 3.2,
+                          ),
+                          itemCount: stores.length,
+                          itemBuilder: (context, index) {
+                            final store = stores[index];
+                            return _StoreCard(
+                              store: store,
+                              isDefault: store.id == user.defaultStore?.id,
+                              onTap: () => _selectStore(context, ref, store),
+                            );
+                          },
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: Responsive.padding(context)),
+                          itemCount: stores.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final store = stores[index];
+                            return _StoreCard(
+                              store: store,
+                              isDefault: store.id == user.defaultStore?.id,
+                              onTap: () => _selectStore(context, ref, store),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -87,7 +119,8 @@ class StoreSelectionPage extends ConsumerWidget {
     );
   }
 
-  void _selectStore(BuildContext context, WidgetRef ref, StoreEntity store) async {
+  void _selectStore(
+      BuildContext context, WidgetRef ref, StoreEntity store) async {
     ref.read(selectedStoreProvider.notifier).state = store;
     final secureStorage = ref.read(secureStorageProvider);
     await secureStorage.saveSelectedStoreId(store.id);
@@ -102,7 +135,8 @@ class _StoreCard extends StatelessWidget {
   final bool isDefault;
   final VoidCallback onTap;
 
-  const _StoreCard({required this.store, required this.isDefault, required this.onTap});
+  const _StoreCard(
+      {required this.store, required this.isDefault, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -126,12 +160,14 @@ class _StoreCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 48, height: 48,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE8E0),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.store, color: Color(0xFFE85D3A), size: 24),
+              child:
+                  const Icon(Icons.store, color: Color(0xFFE85D3A), size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -143,25 +179,36 @@ class _StoreCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           store.name,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ),
                       if (isDefault)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE85D3A),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('DEFAULT', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                          child: const Text('DEFAULT',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)),
                         ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('Kode: ${store.code}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                  Text('Kode: ${store.code}',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey)),
                   if (store.address != null) ...[
                     const SizedBox(height: 2),
-                    Text(store.address!, style: const TextStyle(fontSize: 12, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(store.address!,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ],
               ),

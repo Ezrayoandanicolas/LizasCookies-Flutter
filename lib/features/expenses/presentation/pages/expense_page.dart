@@ -4,21 +4,23 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/providers/tenant_provider.dart';
+import '../../../../core/utils/responsive.dart';
 
-final expensesProvider =
-    StateNotifierProvider<ExpensesNotifier, AsyncValue<List<Map<String, dynamic>>>>((ref) {
+final expensesProvider = StateNotifierProvider<ExpensesNotifier,
+    AsyncValue<List<Map<String, dynamic>>>>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp =
       ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
   return ExpensesNotifier(dio, tenantQp);
 });
 
-final expenseCategoriesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final expenseCategoriesProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final dio = ref.watch(dioClientProvider).dio;
   final tenantQp =
       ref.watch(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
-  final res =
-      await dio.get('/superadmin/expense-categories', queryParameters: tenantQp);
+  final res = await dio.get('/superadmin/expense-categories',
+      queryParameters: tenantQp);
   final data = res.data;
   if (data is List) {
     return data.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -26,7 +28,8 @@ final expenseCategoriesProvider = FutureProvider<List<Map<String, dynamic>>>((re
   return [];
 });
 
-class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
+class ExpensesNotifier
+    extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final Dio _dio;
   final Map<String, dynamic> _tenantQp;
   int _page = 1;
@@ -34,7 +37,8 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
 
   bool get hasMore => _hasMore;
 
-  ExpensesNotifier(this._dio, this._tenantQp) : super(const AsyncValue.loading()) {
+  ExpensesNotifier(this._dio, this._tenantQp)
+      : super(const AsyncValue.loading()) {
     fetch();
   }
 
@@ -44,7 +48,8 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
     state = const AsyncValue.loading();
     try {
       final params = <String, dynamic>{..._tenantQp, 'page': 1, 'per_page': 20};
-      final res = await _dio.get('/superadmin/expenses', queryParameters: params);
+      final res =
+          await _dio.get('/superadmin/expenses', queryParameters: params);
       final data = res.data;
       List list;
       if (data is Map && data.containsKey('data')) {
@@ -67,8 +72,13 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
     if (!_hasMore) return;
     _page++;
     try {
-      final params = <String, dynamic>{..._tenantQp, 'page': _page, 'per_page': 20};
-      final res = await _dio.get('/superadmin/expenses', queryParameters: params);
+      final params = <String, dynamic>{
+        ..._tenantQp,
+        'page': _page,
+        'per_page': 20
+      };
+      final res =
+          await _dio.get('/superadmin/expenses', queryParameters: params);
       final data = res.data;
       List list;
       if (data is Map && data.containsKey('data')) {
@@ -100,13 +110,16 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
       'amount': amount,
       'expense_category_id': expenseCategoryId,
       'expense_date': expenseDate,
-      if (description != null && description.isNotEmpty) 'description': description,
-      if (paymentMethod != null && paymentMethod.isNotEmpty) 'payment_method': paymentMethod,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (paymentMethod != null && paymentMethod.isNotEmpty)
+        'payment_method': paymentMethod,
     });
     await fetch();
   }
 
-  Future<bool> update(int id, {
+  Future<bool> update(
+    int id, {
     required String title,
     required String amount,
     required int expenseCategoryId,
@@ -120,8 +133,10 @@ class ExpensesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic
         'amount': amount,
         'expense_category_id': expenseCategoryId,
         'expense_date': expenseDate,
-        if (description != null && description.isNotEmpty) 'description': description,
-        if (paymentMethod != null && paymentMethod.isNotEmpty) 'payment_method': paymentMethod,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        if (paymentMethod != null && paymentMethod.isNotEmpty)
+          'payment_method': paymentMethod,
       });
       await fetch();
       return true;
@@ -154,7 +169,8 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
 
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollEndNotification &&
-        notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+        notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 200) {
       ref.read(expensesProvider.notifier).loadMore();
     }
     return false;
@@ -212,8 +228,10 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
               : NotificationListener<ScrollNotification>(
                   onNotification: _onScrollNotification,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: expenses.length + (ref.read(expensesProvider.notifier).hasMore ? 1 : 0),
+                    padding: EdgeInsets.all(Responsive.padding(context,
+                        mobile: 10, tablet: 12, desktop: 16)),
+                    itemCount: expenses.length +
+                        (ref.read(expensesProvider.notifier).hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == expenses.length) {
                         return const Padding(
@@ -224,8 +242,10 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
                       return _ExpenseCard(
                         expense: expenses[index],
                         currencyFormat: _currencyFormat,
-                        onEdit: () => _showEditExpenseSheet(context, expenses[index]),
-                        onDelete: () => _confirmDelete(context, expenses[index]),
+                        onEdit: () =>
+                            _showEditExpenseSheet(context, expenses[index]),
+                        onDelete: () =>
+                            _confirmDelete(context, expenses[index]),
                       );
                     },
                   ),
@@ -256,7 +276,8 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
     );
   }
 
-  void _showEditExpenseSheet(BuildContext context, Map<String, dynamic> expense) {
+  void _showEditExpenseSheet(
+      BuildContext context, Map<String, dynamic> expense) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -278,14 +299,17 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, Map<String, dynamic> expense) async {
+  Future<void> _confirmDelete(
+      BuildContext context, Map<String, dynamic> expense) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Pengeluaran'),
         content: Text('Hapus "${expense['description']}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Hapus', style: TextStyle(color: Colors.red))),
@@ -293,7 +317,8 @@ class _ExpensePageState extends ConsumerState<ExpensePage> {
       ),
     );
     if (confirmed == true) {
-      final success = await ref.read(expensesProvider.notifier).remove(expense['id']);
+      final success =
+          await ref.read(expensesProvider.notifier).remove(expense['id']);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(success ? 'Berhasil dihapus' : 'Gagal menghapus'),
@@ -319,7 +344,8 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final description = expense['title']?.toString() ?? expense['description'] ?? '-';
+    final description =
+        expense['title']?.toString() ?? expense['description'] ?? '-';
     final amount = expense['amount'] ?? '0';
     final expenseDate = expense['expense_date'] ?? '';
     final category = expense['expense_category'];
@@ -512,7 +538,8 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final amount = _amountCtrl.text.trim().replaceAll('.', '').replaceAll(',', '');
+      final amount =
+          _amountCtrl.text.trim().replaceAll('.', '').replaceAll(',', '');
       if (_isEdit) {
         final success = await ref.read(expensesProvider.notifier).update(
               widget.expense!['id'],
@@ -520,7 +547,9 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               amount: amount,
               expenseCategoryId: _selectedCategoryId!,
               expenseDate: dateStr,
-              description: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              description: _notesCtrl.text.trim().isEmpty
+                  ? null
+                  : _notesCtrl.text.trim(),
               paymentMethod: _selectedPaymentMethod,
             );
         if (success) {
@@ -532,7 +561,9 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               amount: amount,
               expenseCategoryId: _selectedCategoryId!,
               expenseDate: dateStr,
-              description: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+              description: _notesCtrl.text.trim().isEmpty
+                  ? null
+                  : _notesCtrl.text.trim(),
               paymentMethod: _selectedPaymentMethod,
             );
         widget.onSuccess();
@@ -573,7 +604,10 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
         ),
         child: ListView(
           controller: scrollCtrl,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.symmetric(
+              horizontal: Responsive.padding(context,
+                  mobile: 16, tablet: 20, desktop: 24),
+              vertical: 16),
           children: [
             Center(
               child: Container(
@@ -616,7 +650,8 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                      final n = int.tryParse(v.replaceAll('.', '').replaceAll(',', ''));
+                      final n = int.tryParse(
+                          v.replaceAll('.', '').replaceAll(',', ''));
                       if (n == null || n <= 0) return 'Masukkan angka valid';
                       return null;
                     },
@@ -632,12 +667,14 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                     ),
                     items: const [
                       DropdownMenuItem(value: 'cash', child: Text('Tunai')),
-                      DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
+                      DropdownMenuItem(
+                          value: 'transfer', child: Text('Transfer')),
                       DropdownMenuItem(value: 'qris', child: Text('QRIS')),
                       DropdownMenuItem(value: 'card', child: Text('Kartu')),
                       DropdownMenuItem(value: 'other', child: Text('Lainnya')),
                     ],
-                    onChanged: (v) => setState(() => _selectedPaymentMethod = v),
+                    onChanged: (v) =>
+                        setState(() => _selectedPaymentMethod = v),
                   ),
                   const SizedBox(height: 14),
                   categoriesAsync.when(
@@ -672,7 +709,8 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
                         prefixIcon: Icon(Icons.calendar_today),
                       ),
                       child: Text(
-                        DateFormat('dd MMM yyyy', 'id_ID').format(_selectedDate),
+                        DateFormat('dd MMM yyyy', 'id_ID')
+                            .format(_selectedDate),
                       ),
                     ),
                   ),
@@ -692,7 +730,8 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: Responsive.spacing(context,
+                  mobile: 44, tablet: 48, desktop: 52),
               child: ElevatedButton(
                 onPressed: _saving ? null : _submit,
                 style: ElevatedButton.styleFrom(
