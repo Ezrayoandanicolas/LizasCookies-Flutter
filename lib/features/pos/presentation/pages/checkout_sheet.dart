@@ -27,6 +27,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   bool _processing = false;
+  DateTime _orderDate = DateTime.now();
 
   static const _methods = ['Tunai', 'QRIS', 'Transfer Bank', 'Kartu'];
 
@@ -102,6 +103,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         'order_source': 'direct',
         'status': overrideStatus ?? _orderStatus,
         'notes': _notesController.text.isNotEmpty ? _notesController.text : null,
+        'order_date': '${_orderDate.year}-${_orderDate.month.toString().padLeft(2, '0')}-${_orderDate.day.toString().padLeft(2, '0')}',
       };
 
       if (_paymentMethod == 'Tunai') {
@@ -254,6 +256,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                       const SizedBox(height: 16),
                       _buildCashSection(),
                     ],
+                    const SizedBox(height: 12),
+                    _buildDateSection(),
                     const SizedBox(height: 12),
                     _buildNotesSection(),
                     const SizedBox(height: 20),
@@ -601,6 +605,59 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildDateSection() {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final isToday = _orderDate.year == now.year && _orderDate.month == now.month && _orderDate.day == now.day;
+    final dateStr = '${_orderDate.day.toString().padLeft(2, '0')}/${_orderDate.month.toString().padLeft(2, '0')}/${_orderDate.year}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tanggal Order', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: _orderDate,
+              firstDate: DateTime(now.year, now.month - 1),
+              lastDate: now,
+              locale: const Locale('id', 'ID'),
+            );
+            if (picked != null) setState(() => _orderDate = picked);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today, size: 18, color: theme.colorScheme.primary),
+                const SizedBox(width: 10),
+                Text(dateStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                const Spacer(),
+                if (!isToday)
+                  TextButton(
+                    onPressed: () => setState(() => _orderDate = now),
+                    child: const Text('Hari Ini', style: TextStyle(fontSize: 12)),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                    child: const Text('Hari Ini', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
