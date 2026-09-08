@@ -60,6 +60,6 @@ class SyncHistoryItem {
     httpStatusCode: json['httpStatusCode'],
     timestamp: DateTime.parse(json['timestamp']),
     retryCount: json['retryCount'] ?? 0,
-    requestBody: json['requestBody'],
+    requestBody: json['requestBody'] != null ? Map<String, dynamic>.from(json['requestBody']) : null,
   );
 }
