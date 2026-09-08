@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
@@ -11,6 +12,7 @@ import '../../../../core/providers/tenant_provider.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../auth/domain/entities/auth_entity.dart';
+import '../../../cart/data/cart_provider.dart';
 
 const _wib = Duration(hours: 7);
 String _fmtWIB(DateTime? d) {
@@ -20,11 +22,12 @@ String _fmtWIB(DateTime? d) {
 }
 
 class OrderItem {
+  final int? productId;
   final String name;
   final int quantity;
   final double price;
 
-  const OrderItem({required this.name, required this.quantity, required this.price});
+  const OrderItem({this.productId, required this.name, required this.quantity, required this.price});
   double get total => price * quantity;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -34,7 +37,9 @@ class OrderItem {
     } else {
       name = (json['product_name'] ?? json['name'] ?? '-').toString();
     }
+    final pid = json['product_id'] != null ? (json['product_id'] is int ? json['product_id'] as int : int.tryParse(json['product_id'].toString())) : null;
     return OrderItem(
+      productId: pid,
       name: name,
       quantity: (json['quantity'] ?? 1).toInt(),
       price: double.tryParse((json['price'] ?? 0).toString()) ?? 0,
@@ -42,6 +47,7 @@ class OrderItem {
   }
 
   Map<String, dynamic> toJson() => {
+    'product_id': productId,
     'product_name': name,
     'quantity': quantity,
     'price': price,
@@ -596,6 +602,26 @@ class _OrderCard extends ConsumerWidget {
                   const Spacer(),
                   Text(order.paymentMethod.toUpperCase(),
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => _reorder(context, ref),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.replay, size: 14, color: theme.colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Text('Reorder', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -603,6 +629,26 @@ class _OrderCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _reorder(BuildContext context, WidgetRef ref) {
+    if (order.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada item untuk di-reorder'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    final cart = ref.read(cartProvider.notifier);
+    int added = 0;
+    for (final item in order.items) {
+      if (item.productId == null) continue;
+      cart.addItem(item.productId!, item.name, item.price, quantity: item.quantity);
+      added++;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$added item ditambahkan ke keranjang'), backgroundColor: Colors.green),
+    );
+    context.push('/pos');
   }
 
   Future<void> _showDetail(BuildContext context, WidgetRef ref) async {
