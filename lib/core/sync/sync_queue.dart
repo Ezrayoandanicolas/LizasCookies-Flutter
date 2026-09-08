@@ -60,7 +60,7 @@ class SyncQueue {
     if (raw == null) return [];
 
     final list = jsonDecode(raw as String) as List;
-    return list.map((e) => SyncQueueItem.fromJson(e as Map<String, dynamic>)).toList();
+    return list.map((e) => SyncQueueItem.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
   void _saveAll(List<SyncQueueItem> items) {

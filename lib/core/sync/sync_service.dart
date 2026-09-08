@@ -287,7 +287,7 @@ class SyncHistoryNotifier extends StateNotifier<List<SyncHistoryItem>> {
 
   static List<SyncHistoryItem> _load() {
     final raw = LocalStorage.getAllSyncHistory();
-    return raw.map((e) => SyncHistoryItem.fromJson(e)).toList();
+    return raw.map((e) => SyncHistoryItem.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
   void refresh() {
