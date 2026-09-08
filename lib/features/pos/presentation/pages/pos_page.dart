@@ -805,11 +805,13 @@ class _ProductCard extends ConsumerWidget {
                   Navigator.pop(ctx);
                   try {
                     final dio = ref.read(dioClientProvider).dio;
-                    final tenantQp = ref.read(tenantQueryProvider).valueOrNull ?? <String, dynamic>{};
+                    final storeId = store.id;
+                    debugPrint('[POS] Add stock: product=${product.id}, store=$storeId, qty=$qty');
                     final res = await dio.post(
-                      '/superadmin/products/${product.id}/stores/${store.id}/adjust-stock',
-                      data: {'delta': qty, ...tenantQp},
+                      '/superadmin/products/${product.id}/stores/$storeId/adjust-stock',
+                      data: {'delta': qty},
                     );
+                    debugPrint('[POS] Add stock success: ${res.data}');
                     final newStock = res.data['new_stock'] ?? (product.stock + qty);
                     ref.read(productsProvider.notifier).reloadAfterStockAdjust(product.id, newStock as int);
                     if (context.mounted) {
@@ -817,10 +819,12 @@ class _ProductCard extends ConsumerWidget {
                     }
                   } catch (e) {
                     String msg = 'Gagal tambah stok';
-                    if (e is DioException && e.response?.data != null) {
-                      final resp = e.response!.data;
-                      msg = resp['message'] ?? resp['error'] ?? msg;
+                    if (e is DioException) {
+                      msg = 'Error ${e.response?.statusCode}: ${e.response?.data ?? e.message}';
+                    } else {
+                      msg = e.toString();
                     }
+                    debugPrint('[POS] Add stock error: $msg');
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
                     }
