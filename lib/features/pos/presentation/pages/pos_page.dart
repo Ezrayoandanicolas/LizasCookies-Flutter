@@ -597,8 +597,10 @@ class _ProductCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
                   Container(
                     decoration: const BoxDecoration(
@@ -611,9 +613,8 @@ class _ProductCard extends ConsumerWidget {
                             child: CachedNetworkImage(
                               imageUrl: product.image!,
                               fit: BoxFit.cover,
-                              width: double.infinity,
                               placeholder: (_, __) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: _gold)),
-                              errorWidget: (_, __, ___) => const Icon(Icons.cookie_rounded, size: 32, color: _gold),
+                              errorWidget: (_, __, ___) => const Center(child: Icon(Icons.cookie_rounded, size: 36, color: _gold)),
                             ),
                           )
                         : const Center(child: Icon(Icons.cookie_rounded, size: 36, color: _gold)),
@@ -662,10 +663,28 @@ class _ProductCard extends ConsumerWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 2),
               child: Text(
                 CurrencyFormatter.idr(product.price),
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _gold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 2, 6, 6),
+              child: SizedBox(
+                width: double.infinity,
+                height: 26,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showAddStockDialog(context, ref),
+                  icon: const Icon(Icons.inventory_rounded, size: 13),
+                  label: const Text('Stok', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    side: const BorderSide(color: _warning),
+                    foregroundColor: _warning,
+                  ),
+                ),
               ),
             ),
           ],
@@ -748,6 +767,118 @@ class _ProductCard extends ConsumerWidget {
                   elevation: 0,
                 ),
                 child: const Text('Tambah ke Keranjang', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddStockDialog(BuildContext context, WidgetRef ref) {
+    final qtyCtrl = TextEditingController(text: '1');
+    final store = ref.read(selectedAdminStoreProvider);
+    if (store == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih toko terlebih dahulu'), backgroundColor: _warning));
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(Icons.inventory_rounded, color: _warning, size: 22),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Tambah Stok', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: _textPrimary))),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('${product.name} — Stok: ${product.stock}', style: const TextStyle(fontSize: 13, color: _textSecondary)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: qtyCtrl,
+              keyboardType: TextInputType.number,
+              autofocus: false,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Jumlah',
+                labelStyle: const TextStyle(color: _textSecondary),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _warning, width: 1.5)),
+                filled: true,
+                fillColor: _surfaceLight,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _QuickQtyBtn(label: '5', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '10', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '25', ctrl: qtyCtrl),
+                const SizedBox(width: 6),
+                _QuickQtyBtn(label: '50', ctrl: qtyCtrl),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final qty = int.tryParse(qtyCtrl.text);
+                  if (qty == null || qty <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Masukkan jumlah valid'), backgroundColor: _error));
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  try {
+                    final dio = ref.read(dioClientProvider).dio;
+                    final storeId = store.id;
+                    debugPrint('[POS] Add stock: product=${product.id}, store=$storeId, qty=$qty');
+                    final res = await dio.post(
+                      '/superadmin/products/${product.id}/stores/$storeId/adjust-stock',
+                      data: {'delta': qty},
+                    );
+                    debugPrint('[POS] Add stock success: ${res.data}');
+                    final newStockRaw = res.data['new_stock'] ?? (product.stock + qty);
+                    final newStock = double.tryParse(newStockRaw.toString())?.round() ?? (product.stock + qty);
+                    ref.read(productsProvider.notifier).reloadAfterStockAdjust(product.id, newStock);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok ditambah $qty → $newStock'), backgroundColor: _success));
+                    }
+                  } catch (e) {
+                    String msg = 'Gagal tambah stok';
+                    if (e is DioException) {
+                      msg = 'Error ${e.response?.statusCode}: ${e.response?.data ?? e.message}';
+                    } else {
+                      msg = e.toString();
+                    }
+                    debugPrint('[POS] Add stock error: $msg');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _error));
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _warning,
+                  foregroundColor: _bg,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Tambah Stok', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
           ],
