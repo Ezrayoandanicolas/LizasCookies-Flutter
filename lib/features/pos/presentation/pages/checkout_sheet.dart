@@ -626,7 +626,6 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               initialDate: _orderDate,
               firstDate: DateTime(now.year, now.month - 1),
               lastDate: now,
-              locale: const Locale('id', 'ID'),
             );
             if (picked != null) setState(() => _orderDate = picked);
           },
