@@ -94,7 +94,7 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
                 )
               else
                 FilledButton.tonalIcon(
-                  onPressed: isOnline ? () => syncService.manualSync() : null,
+                  onPressed: () => syncService.manualSync(),
                   icon: const Icon(Icons.sync, size: 18),
                   label: const Text('Sync Manual'),
                 ),

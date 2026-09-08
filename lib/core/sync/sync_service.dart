@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
@@ -46,7 +47,7 @@ class SyncService {
   }
 
   Future<void> manualSync() async {
-    if (_isSyncing) return;
+    _isSyncing = false;
     await LocalStorage.resetAllRetryCounts();
     await processPendingOrders();
   }
@@ -54,9 +55,11 @@ class SyncService {
   Future<void> processPendingOrders() async {
     if (_isSyncing) return;
     _isSyncing = true;
+    debugPrint('[Sync] Starting processPendingOrders...');
     _syncStateController.add(const SyncState.syncing());
 
     final orders = LocalStorage.getAllPendingOrders();
+    debugPrint('[Sync] Found ${orders.length} pending orders');
     if (orders.isEmpty) {
       _isSyncing = false;
       _syncStateController.add(const SyncState.idle());
