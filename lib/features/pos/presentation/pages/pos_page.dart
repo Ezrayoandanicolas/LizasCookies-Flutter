@@ -812,8 +812,9 @@ class _ProductCard extends ConsumerWidget {
                       data: {'delta': qty},
                     );
                     debugPrint('[POS] Add stock success: ${res.data}');
-                    final newStock = res.data['new_stock'] ?? (product.stock + qty);
-                    ref.read(productsProvider.notifier).reloadAfterStockAdjust(product.id, newStock as int);
+                    final newStockRaw = res.data['new_stock'] ?? (product.stock + qty);
+                    final newStock = double.tryParse(newStockRaw.toString())?.round() ?? (product.stock + qty);
+                    ref.read(productsProvider.notifier).reloadAfterStockAdjust(product.id, newStock);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok ditambah $qty → $newStock'), backgroundColor: Colors.green));
                     }
